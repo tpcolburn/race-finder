@@ -8,10 +8,12 @@ Sources:
 """
 
 import re
+import io
 import os
 import json
 import time
 import hashlib
+import zipfile
 import requests
 from datetime import datetime, timedelta
 from math import radians, cos, sin, asin, sqrt
@@ -106,9 +108,51 @@ def sort_distances(dist_set):
 _CITY_COORDS = {}  # (city_lower, state_upper) → (lat, lon)
 
 def load_city_coords():
-    """Build a (city_lower, state_upper) → (lat, lon) lookup from geonamescache."""
+    """Build (city_lower, state_upper) → (lat, lon) from GeoNames cities1000 (~130k US places)."""
     global _CITY_COORDS
-    print("Loading city coordinates lookup...")
+    print("Downloading GeoNames cities1000...")
+
+    def _ingest(lines):
+        count = 0
+        for raw in lines:
+            cols = raw.decode('utf-8').rstrip('\n').split('\t')
+            if len(cols) < 11 or cols[8] != 'US':
+                continue
+            state = cols[10].upper()
+            if not state or len(state) != 2:
+                continue
+            try:
+                coords = (float(cols[4]), float(cols[5]))
+            except ValueError:
+                continue
+            name = cols[1]
+            _CITY_COORDS[(name.lower(), state)] = coords
+            ascii_name = cols[2]
+            if ascii_name and ascii_name.lower() != name.lower():
+                _CITY_COORDS[(ascii_name.lower(), state)] = coords
+            for alt in (cols[3].split(',') if cols[3] else []):
+                alt = alt.strip()
+                if alt:
+                    _CITY_COORDS[(alt.lower(), state)] = coords
+            count += 1
+        return count
+
+    try:
+        resp = requests.get(
+            'https://download.geonames.org/export/dump/cities1000.zip',
+            timeout=120,
+            headers={'User-Agent': BOT_UA},
+        )
+        resp.raise_for_status()
+        with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+            with zf.open('cities1000.txt') as f:
+                count = _ingest(f)
+        print(f"  Loaded {len(_CITY_COORDS):,} entries ({count:,} US cities)")
+        return
+    except Exception as e:
+        print(f"  GeoNames download failed: {e} — falling back to geonamescache")
+
+    # Fallback: geonamescache (cities > 15k population only)
     try:
         import geonamescache
         gc = geonamescache.GeonamesCache()
@@ -116,19 +160,17 @@ def load_city_coords():
             if city.get('countrycode') != 'US':
                 continue
             state = (city.get('admin1code') or '').upper()
-            key   = (city['name'].lower(), state)
             coords = (float(city['latitude']), float(city['longitude']))
-            _CITY_COORDS[key] = coords
-            # Also index alternate names (list in geonamescache 3.x, string in 1.x)
+            _CITY_COORDS[(city['name'].lower(), state)] = coords
             alts = city.get('alternatenames') or []
             if isinstance(alts, str):
                 alts = [a.strip() for a in alts.split(',')]
             for alt in alts:
                 if alt:
                     _CITY_COORDS[(alt.lower(), state)] = coords
-        print(f"  Loaded {len(_CITY_COORDS):,} city entries")
-    except Exception as e:
-        print(f"  City lookup failed ({e}), proximity filtering will be limited")
+        print(f"  Loaded {len(_CITY_COORDS):,} entries (geonamescache fallback)")
+    except Exception as e2:
+        print(f"  Fallback also failed: {e2}")
 
 
 def geocode_city(city, state):
@@ -463,6 +505,9 @@ def fetch_runreg():
             lon = float(ev.get('Longitude') or 0) or None
         except (ValueError, TypeError):
             lat = lon = None
+
+        if (lat is None or lon is None) and city and state:
+            lat, lon = geocode_city(city, state)
 
         categories = ev.get('Categories') or []
         dist_set = set()
