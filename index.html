@@ -435,6 +435,9 @@ header h1 span { opacity: 0.7; font-weight: 400; font-size: 14px; margin-left: 1
       <span class="range-value" id="proximity-label">Any distance</span>
       <input type="range" id="proximity" min="0" max="3000" step="50" value="3000"
              oninput="updateProximityLabel(); applyFilters()">
+      <label style="margin-top:8px;font-size:12px;color:var(--text-muted);">
+        <input type="checkbox" id="show-unknown-loc" onchange="applyFilters()"> Include races with unknown location
+      </label>
     </div>
 
     <div class="filter-divider"></div>
@@ -607,8 +610,12 @@ function applyFilters() {
 
     // Proximity
     const unlimited = maxMiles >= 3000;
-    if (!unlimited && r.distance_from_solon != null) {
-      if (r.distance_from_solon > maxMiles) return false;
+    if (!unlimited) {
+      if (r.distance_from_solon == null) {
+        if (!document.getElementById('show-unknown-loc').checked) return false;
+      } else if (r.distance_from_solon > maxMiles) {
+        return false;
+      }
     }
 
     // Date range
@@ -660,6 +667,7 @@ function resetFilters() {
   updateProximityLabel();
   setDefaultDates();
   document.querySelectorAll('.type-filter, .dist-filter, .source-filter').forEach(el => el.checked = true);
+  document.getElementById('show-unknown-loc').checked = false;
   document.getElementById('state-filter').value = '';
   document.getElementById('sort-by').value = 'date';
   applyFilters();
@@ -677,11 +685,8 @@ function render() {
   const start = (currentPage - 1) * PER_PAGE;
   const page = filtered.slice(start, start + PER_PAGE);
 
-  const maxMiles = parseInt(document.getElementById('proximity').value);
-  const unknownLoc = maxMiles < 3000 ? filtered.filter(r => r.distance_from_solon == null).length : 0;
-  const locNote = unknownLoc > 0 ? ` <span style="color:var(--text-muted);font-size:12px;">(+${unknownLoc.toLocaleString()} location unknown)</span>` : '';
   document.getElementById('results-count').innerHTML =
-    `Showing <strong>${page.length}</strong> of <strong>${total.toLocaleString()}</strong> races${locNote}`;
+    `Showing <strong>${page.length}</strong> of <strong>${total.toLocaleString()}</strong> races`;
   document.getElementById('mobile-count').textContent = `${total.toLocaleString()} races`;
 
   if (!total) {
