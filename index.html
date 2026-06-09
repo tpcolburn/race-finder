@@ -607,8 +607,7 @@ function applyFilters() {
 
     // Proximity
     const unlimited = maxMiles >= 3000;
-    if (!unlimited) {
-      if (r.distance_from_solon == null) return false;
+    if (!unlimited && r.distance_from_solon != null) {
       if (r.distance_from_solon > maxMiles) return false;
     }
 
@@ -678,8 +677,11 @@ function render() {
   const start = (currentPage - 1) * PER_PAGE;
   const page = filtered.slice(start, start + PER_PAGE);
 
+  const maxMiles = parseInt(document.getElementById('proximity').value);
+  const unknownLoc = maxMiles < 3000 ? filtered.filter(r => r.distance_from_solon == null).length : 0;
+  const locNote = unknownLoc > 0 ? ` <span style="color:var(--text-muted);font-size:12px;">(+${unknownLoc.toLocaleString()} location unknown)</span>` : '';
   document.getElementById('results-count').innerHTML =
-    `Showing <strong>${page.length}</strong> of <strong>${total.toLocaleString()}</strong> races`;
+    `Showing <strong>${page.length}</strong> of <strong>${total.toLocaleString()}</strong> races${locNote}`;
   document.getElementById('mobile-count').textContent = `${total.toLocaleString()} races`;
 
   if (!total) {

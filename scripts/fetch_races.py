@@ -9,10 +9,14 @@ Sources:
 
 import re
 import os
+import io
+import csv
 import json
 import time
+import zipfile
 import hashlib
 import requests
+import urllib.request
 from datetime import datetime, timedelta
 from math import radians, cos, sin, asin, sqrt
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -101,6 +105,45 @@ def sort_distances(dist_set):
     return sorted(dist_set, key=lambda d: DISTANCE_CATEGORIES.index(d) if d in DISTANCE_CATEGORIES else 99)
 
 
+# ── City geocoding lookup ─────────────────────────────────────────────────────
+
+_CITY_COORDS = {}  # (city_lower, state_upper) → (lat, lon)
+
+def load_city_coords():
+    """Download SimpleMaps free US cities CSV and build a city+state → lat/lon lookup."""
+    global _CITY_COORDS
+    print("Loading city coordinates lookup...")
+    url = 'https://simplemaps.com/static/data/us-cities/1.79/basic/simplemaps_uscities_basicv1.79.zip'
+    try:
+        with urllib.request.urlopen(url, timeout=30) as resp:
+            zf = zipfile.ZipFile(io.BytesIO(resp.read()))
+            csv_name = next(n for n in zf.namelist() if n.endswith('.csv'))
+            with zf.open(csv_name) as f:
+                reader = csv.DictReader(io.TextIOWrapper(f, encoding='utf-8'))
+                for row in reader:
+                    key = (row['city'].lower(), row['state_id'].upper())
+                    try:
+                        _CITY_COORDS[key] = (float(row['lat']), float(row['lng']))
+                    except (ValueError, KeyError):
+                        pass
+        print(f"  Loaded {len(_CITY_COORDS):,} city entries")
+    except Exception as e:
+        print(f"  City lookup failed ({e}), proximity filtering will be limited")
+
+
+def geocode_city(city, state):
+    """Return (lat, lon) for a city+state, or (None, None) if not found."""
+    if not city or not state:
+        return None, None
+    key = (city.strip().lower(), state.strip().upper())
+    coords = _CITY_COORDS.get(key)
+    if coords:
+        return coords
+    # Try without common suffixes like " Township", " County"
+    short = re.sub(r'\s+(township|county|borough|village|town)$', '', key[0], flags=re.I)
+    return _CITY_COORDS.get((short, key[1]), (None, None))
+
+
 # ── RunSignUp ─────────────────────────────────────────────────────────────────
 
 def fetch_runsignup():
@@ -144,14 +187,18 @@ def fetch_runsignup():
             race    = item.get('race', item)
             address = race.get('address') or {}
 
+            city  = address.get('city') or ''
+            state = address.get('state') or ''
+
             try:
                 lat = float(address.get('lat') or 0) or None
                 lon = float(address.get('lng') or 0) or None
             except (ValueError, TypeError):
                 lat = lon = None
 
-            city  = address.get('city') or ''
-            state = address.get('state') or ''
+            # Fall back to city lookup when RunSignUp omits coordinates
+            if (lat is None or lon is None) and city and state:
+                lat, lon = geocode_city(city, state)
 
             # next_date is a string in MM/DD/YYYY format (e.g. "08/09/2026")
             raw_dt = race.get('next_date') or ''
@@ -464,6 +511,7 @@ def deduplicate(all_races):
 
 
 def main():
+    load_city_coords()
     all_races = []
     all_races.extend(fetch_runsignup())
     all_races.extend(fetch_ultrasignup())
