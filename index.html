@@ -715,7 +715,7 @@ function buildCard(r) {
   if (r.url) {
     card.style.cursor = 'pointer';
     card.addEventListener('click', e => {
-      if (!e.target.closest('a')) window.open(r.url, '_blank', 'noopener,noreferrer');
+      if (!e.target.closest('a')) window.open(r.url, '_blank');
     });
   }
 

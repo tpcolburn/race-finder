@@ -529,6 +529,9 @@ def fetch_runreg():
         url = ev.get('EventUrl') or ev.get('EventWebsite') or (
             f'https://www.runreg.com{permalink}' if permalink else ''
         )
+        # Ensure RunReg URLs use HTTPS
+        if url.startswith('http://'):
+            url = 'https://' + url[7:]
 
         races.append({
             'id':                  f"rr_{ev.get('EventId', make_dedup_key(name, date_str, state))}",
