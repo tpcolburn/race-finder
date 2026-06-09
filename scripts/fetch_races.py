@@ -117,12 +117,15 @@ def load_city_coords():
                 continue
             state = (city.get('admin1code') or '').upper()
             key   = (city['name'].lower(), state)
-            _CITY_COORDS[key] = (float(city['latitude']), float(city['longitude']))
-            # Also index alternate names / ASCII name for fuzzy matching
-            for alt in (city.get('alternatenames') or '').split(','):
-                alt = alt.strip()
+            coords = (float(city['latitude']), float(city['longitude']))
+            _CITY_COORDS[key] = coords
+            # Also index alternate names (list in geonamescache 3.x, string in 1.x)
+            alts = city.get('alternatenames') or []
+            if isinstance(alts, str):
+                alts = [a.strip() for a in alts.split(',')]
+            for alt in alts:
                 if alt:
-                    _CITY_COORDS[(alt.lower(), state)] = _CITY_COORDS[key]
+                    _CITY_COORDS[(alt.lower(), state)] = coords
         print(f"  Loaded {len(_CITY_COORDS):,} city entries")
     except Exception as e:
         print(f"  City lookup failed ({e}), proximity filtering will be limited")
