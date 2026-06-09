@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Race Finder</title>
+<style>
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --border: #e2e6ea;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --trail: #16a34a;
+  --trail-bg: #dcfce7;
+  --road: #2563eb;
+  --road-bg: #dbeafe;
+  --mixed: #9333ea;
+  --mixed-bg: #f3e8ff;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --badge-bg: #f1f5f9;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-hover: 0 4px 12px rgba(0,0,0,0.12);
+  --radius: 10px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── Header ── */
+header {
+  background: var(--primary);
+  color: #fff;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+header h1 span { opacity: 0.7; font-weight: 400; font-size: 14px; margin-left: 10px; }
+#data-updated { font-size: 12px; opacity: 0.75; }
+
+/* ── Layout ── */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 0;
+  min-height: calc(100vh - 58px);
+}
+
+/* ── Sidebar / Filters ── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px 16px;
+  position: sticky;
+  top: 58px;
+  height: calc(100vh - 58px);
+  overflow-y: auto;
+}
+
+.filter-section {
+  margin-bottom: 22px;
+}
+.filter-section h3 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.filter-section label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  user-select: none;
+}
+.filter-section label:hover { color: var(--primary); }
+.filter-section input[type="checkbox"] {
+  width: 15px; height: 15px;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+.filter-section input[type="range"] {
+  width: 100%;
+  accent-color: var(--primary);
+  margin-top: 4px;
+}
+.filter-section input[type="date"],
+.filter-section input[type="text"],
+.filter-section select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  margin-bottom: 6px;
+}
+.filter-section input[type="date"]:focus,
+.filter-section input[type="text"]:focus,
+.filter-section select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+}
+
+.range-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.filter-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 18px 0;
+}
+
+.btn-reset {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.btn-reset:hover {
+  background: var(--bg);
+  color: var(--text);
+  border-color: #bbb;
+}
+
+/* ── Mobile filter toggle ── */
+.filter-toggle {
+  display: none;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  justify-content: space-between;
+}
+.btn-filter-toggle {
+  padding: 7px 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ── Main content ── */
+.main {
+  padding: 20px;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.results-count {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.results-count strong { color: var(--text); }
+
+.sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.sort-bar select {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+/* ── Race cards ── */
+.races-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+
+.race-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.race-card:hover {
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-1px);
+}
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.card-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+  flex: 1;
+}
+.card-name a {
+  color: inherit;
+  text-decoration: none;
+}
+.card-name a:hover { color: var(--primary); }
+
+.type-badge {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.type-trail { background: var(--trail-bg); color: var(--trail); }
+.type-road  { background: var(--road-bg);  color: var(--road); }
+.type-mixed { background: var(--mixed-bg); color: var(--mixed); }
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.card-meta .meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.card-meta .meta-item svg {
+  width: 14px; height: 14px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+.card-meta .meta-item.highlight { color: var(--primary); font-weight: 500; }
+
+.distance-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.dist-badge {
+  padding: 2px 8px;
+  background: var(--badge-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  gap: 8px;
+}
+.source-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--badge-bg);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.btn-register {
+  padding: 6px 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.btn-register:hover { background: var(--primary-dark); }
+
+/* ── Pagination ── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 28px;
+  padding-bottom: 40px;
+  flex-wrap: wrap;
+}
+.page-btn {
+  padding: 7px 13px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+.page-btn:hover:not(:disabled) { background: var(--bg); border-color: #bbb; }
+.page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 600; }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-ellipsis { padding: 7px 4px; color: var(--text-muted); font-size: 13px; }
+
+/* ── Loading / empty states ── */
+.state-message {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+.state-message h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.state-message p { font-size: 14px; }
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar {
+    position: fixed;
+    top: 0; left: -300px;
+    width: 280px;
+    height: 100vh;
+    z-index: 200;
+    transition: left 0.25s ease;
+    padding-top: 60px;
+    box-shadow: none;
+  }
+  .sidebar.open {
+    left: 0;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+  }
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 199;
+  }
+  .sidebar-overlay.visible { display: block; }
+  .filter-toggle { display: flex; }
+  .main { padding: 16px; }
+  .races-grid { grid-template-columns: 1fr; }
+  header h1 span { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Race Finder <span>US Running Events</span></h1>
+  </div>
+  <div id="data-updated">Loading…</div>
+</header>
+
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div class="filter-toggle">
+  <span id="mobile-count"></span>
+  <button class="btn-filter-toggle" onclick="openSidebar()">&#9776; Filters</button>
+</div>
+
+<div class="layout">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="filter-section">
+      <h3>Search</h3>
+      <input type="text" id="search" placeholder="Race name…" oninput="applyFilters()">
+    </div>
+
+    <div class="filter-section">
+      <h3>Distance from Solon, OH</h3>
+      <span class="range-value" id="proximity-label">Any distance</span>
+      <input type="range" id="proximity" min="0" max="3000" step="50" value="3000"
+             oninput="updateProximityLabel(); applyFilters()">
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <div class="filter-section">
+      <h3>Date Range</h3>
+      <input type="date" id="date-from" onchange="applyFilters()">
+      <input type="date" id="date-to"   onchange="applyFilters()">
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <div class="filter-section">
+      <h3>Race Surface</h3>
+      <label><input type="checkbox" class="type-filter" value="road"  checked onchange="applyFilters()"> Road</label>
+      <label><input type="checkbox" class="type-filter" value="trail" checked onchange="applyFilters()"> Trail</label>
+      <label><input type="checkbox" class="type-filter" value="mixed" checked onchange="applyFilters()"> Mixed</label>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <div class="filter-section">
+      <h3>Distance Category</h3>
+      <label><input type="checkbox" class="dist-filter" value="1 Mile"         checked onchange="applyFilters()"> 1 Mile</label>
+      <label><input type="checkbox" class="dist-filter" value="5K"             checked onchange="applyFilters()"> 5K</label>
+      <label><input type="checkbox" class="dist-filter" value="8K"             checked onchange="applyFilters()"> 8K</label>
+      <label><input type="checkbox" class="dist-filter" value="10K"            checked onchange="applyFilters()"> 10K</label>
+      <label><input type="checkbox" class="dist-filter" value="12K"            checked onchange="applyFilters()"> 12K</label>
+      <label><input type="checkbox" class="dist-filter" value="15K"            checked onchange="applyFilters()"> 15K</label>
+      <label><input type="checkbox" class="dist-filter" value="20K"            checked onchange="applyFilters()"> 20K</label>
+      <label><input type="checkbox" class="dist-filter" value="Half Marathon"  checked onchange="applyFilters()"> Half Marathon</label>
+      <label><input type="checkbox" class="dist-filter" value="25K"            checked onchange="applyFilters()"> 25K</label>
+      <label><input type="checkbox" class="dist-filter" value="30K"            checked onchange="applyFilters()"> 30K</label>
+      <label><input type="checkbox" class="dist-filter" value="Marathon"       checked onchange="applyFilters()"> Marathon</label>
+      <label><input type="checkbox" class="dist-filter" value="50K"            checked onchange="applyFilters()"> 50K</label>
+      <label><input type="checkbox" class="dist-filter" value="50M"            checked onchange="applyFilters()"> 50 Mile</label>
+      <label><input type="checkbox" class="dist-filter" value="100K"           checked onchange="applyFilters()"> 100K</label>
+      <label><input type="checkbox" class="dist-filter" value="100M+"          checked onchange="applyFilters()"> 100 Mile+</label>
+      <label><input type="checkbox" class="dist-filter" value="Other Ultra"    checked onchange="applyFilters()"> Other Ultra</label>
+      <label><input type="checkbox" class="dist-filter" value="unknown"        checked onchange="applyFilters()"> Other / Unknown</label>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <div class="filter-section">
+      <h3>State</h3>
+      <select id="state-filter" onchange="applyFilters()">
+        <option value="">All States</option>
+      </select>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <div class="filter-section">
+      <h3>Data Source</h3>
+      <label><input type="checkbox" class="source-filter" value="RunSignUp"  checked onchange="applyFilters()"> RunSignUp</label>
+      <label><input type="checkbox" class="source-filter" value="UltraSignup" checked onchange="applyFilters()"> UltraSignup</label>
+      <label><input type="checkbox" class="source-filter" value="RunReg"     checked onchange="applyFilters()"> RunReg</label>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <button class="btn-reset" onclick="resetFilters()">Reset All Filters</button>
+
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+    <div class="toolbar">
+      <div class="results-count" id="results-count"></div>
+      <div class="sort-bar">
+        Sort:
+        <select id="sort-by" onchange="applyFilters()">
+          <option value="date">Date (soonest first)</option>
+          <option value="proximity">Distance from Solon, OH</option>
+          <option value="name">Race Name (A–Z)</option>
+          <option value="state">State</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="races-container">
+      <div class="state-message">
+        <div class="spinner"></div>
+        <h2>Loading races…</h2>
+        <p>Fetching race data, one moment please.</p>
+      </div>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </main>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let allRaces = [];
+let filtered = [];
+let currentPage = 1;
+const PER_PAGE = 48;
+
+const SOLON_LAT = 41.3895;
+const SOLON_LON = -81.4412;
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+async function boot() {
+  try {
+    const res = await fetch('./data/races.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    allRaces = data.races || [];
+
+    const updated = data.updated && data.updated !== 'never'
+      ? new Date(data.updated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : 'Never';
+    document.getElementById('data-updated').textContent = `Updated ${updated} · ${allRaces.length.toLocaleString()} races`;
+
+    populateStateFilter();
+    setDefaultDates();
+    applyFilters();
+  } catch (e) {
+    document.getElementById('races-container').innerHTML = `
+      <div class="state-message">
+        <h2>No race data yet</h2>
+        <p>Run the GitHub Action manually to fetch race data, or wait for the weekly update.</p>
+        <p style="margin-top:8px;font-size:12px;color:#9ca3af">${e.message}</p>
+      </div>`;
+    document.getElementById('data-updated').textContent = 'No data';
+  }
+}
+
+function setDefaultDates() {
+  const today = new Date();
+  const next12 = new Date(today);
+  next12.setFullYear(next12.getFullYear() + 1);
+  document.getElementById('date-from').value = today.toISOString().slice(0, 10);
+  document.getElementById('date-to').value = next12.toISOString().slice(0, 10);
+}
+
+function populateStateFilter() {
+  const states = [...new Set(allRaces.map(r => r.state).filter(Boolean))].sort();
+  const sel = document.getElementById('state-filter');
+  states.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Filters ────────────────────────────────────────────────────────────────
+function getChecked(cls) {
+  return [...document.querySelectorAll(`.${cls}:checked`)].map(el => el.value);
+}
+
+function applyFilters() {
+  const query = document.getElementById('search').value.trim().toLowerCase();
+  const maxMiles = parseInt(document.getElementById('proximity').value);
+  const dateFrom = document.getElementById('date-from').value;
+  const dateTo = document.getElementById('date-to').value;
+  const types = getChecked('type-filter');
+  const dists = getChecked('dist-filter');
+  const sources = getChecked('source-filter');
+  const state = document.getElementById('state-filter').value;
+  const sortBy = document.getElementById('sort-by').value;
+
+  filtered = allRaces.filter(r => {
+    // Text search
+    if (query && !r.name.toLowerCase().includes(query)) return false;
+
+    // Proximity
+    const unlimited = maxMiles >= 3000;
+    if (!unlimited) {
+      if (r.distance_from_solon == null) return false;
+      if (r.distance_from_solon > maxMiles) return false;
+    }
+
+    // Date range
+    if (dateFrom && r.date < dateFrom) return false;
+    if (dateTo && r.date > dateTo) return false;
+
+    // Race type
+    if (!types.includes(r.race_type)) return false;
+
+    // Distance categories
+    const raceDists = r.distances && r.distances.length ? r.distances : ['unknown'];
+    if (!raceDists.some(d => dists.includes(d))) return false;
+
+    // State
+    if (state && r.state !== state) return false;
+
+    // Source
+    if (!sources.includes(r.source)) return false;
+
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a, b) => {
+    if (sortBy === 'date') {
+      return (a.date || '').localeCompare(b.date || '');
+    }
+    if (sortBy === 'proximity') {
+      const ad = a.distance_from_solon ?? 99999;
+      const bd = b.distance_from_solon ?? 99999;
+      return ad - bd;
+    }
+    if (sortBy === 'name') {
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'state') {
+      return (a.state || '').localeCompare(b.state || '') || (a.date || '').localeCompare(b.date || '');
+    }
+    return 0;
+  });
+
+  currentPage = 1;
+  render();
+}
+
+function resetFilters() {
+  document.getElementById('search').value = '';
+  document.getElementById('proximity').value = 3000;
+  updateProximityLabel();
+  setDefaultDates();
+  document.querySelectorAll('.type-filter, .dist-filter, .source-filter').forEach(el => el.checked = true);
+  document.getElementById('state-filter').value = '';
+  document.getElementById('sort-by').value = 'date';
+  applyFilters();
+}
+
+function updateProximityLabel() {
+  const v = parseInt(document.getElementById('proximity').value);
+  document.getElementById('proximity-label').textContent = v >= 3000 ? 'Any distance' : `Within ${v} miles`;
+}
+
+// ── Rendering ──────────────────────────────────────────────────────────────
+function render() {
+  const total = filtered.length;
+  const totalPages = Math.ceil(total / PER_PAGE);
+  const start = (currentPage - 1) * PER_PAGE;
+  const page = filtered.slice(start, start + PER_PAGE);
+
+  document.getElementById('results-count').innerHTML =
+    `Showing <strong>${page.length}</strong> of <strong>${total.toLocaleString()}</strong> races`;
+  document.getElementById('mobile-count').textContent = `${total.toLocaleString()} races`;
+
+  if (!total) {
+    document.getElementById('races-container').innerHTML = `
+      <div class="state-message">
+        <h2>No races found</h2>
+        <p>Try adjusting your filters or expanding the distance range.</p>
+      </div>`;
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'races-grid';
+  page.forEach(r => grid.appendChild(buildCard(r)));
+  document.getElementById('races-container').innerHTML = '';
+  document.getElementById('races-container').appendChild(grid);
+
+  renderPagination(totalPages);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function buildCard(r) {
+  const card = document.createElement('div');
+  card.className = 'race-card';
+
+  const typeClass = r.race_type === 'trail' ? 'type-trail' : r.race_type === 'mixed' ? 'type-mixed' : 'type-road';
+  const typeLabel = r.race_type === 'trail' ? 'Trail' : r.race_type === 'mixed' ? 'Mixed' : 'Road';
+
+  const dateStr = r.date
+    ? new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+    : 'TBD';
+
+  const proximity = r.distance_from_solon != null
+    ? `<span class="meta-item highlight">${svgIcon('map')} ${r.distance_from_solon.toLocaleString()} mi away</span>`
+    : '';
+
+  const elev = r.elevation_gain
+    ? `<span class="meta-item">${svgIcon('mountain')} ${r.elevation_gain.toLocaleString()} ft gain</span>`
+    : '';
+
+  const distBadges = (r.distances && r.distances.length && r.distances[0] !== 'unknown')
+    ? r.distances.map(d => `<span class="dist-badge">${d}</span>`).join('')
+    : '';
+
+  const desc = r.description
+    ? `<div style="font-size:12px;color:var(--text-muted);line-height:1.4;margin-top:-2px;">${escHtml(r.description.slice(0, 140))}${r.description.length > 140 ? '…' : ''}</div>`
+    : '';
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-name">
+        <a href="${escHtml(r.url || '#')}" target="_blank" rel="noopener">${escHtml(r.name)}</a>
+      </div>
+      <span class="type-badge ${typeClass}">${typeLabel}</span>
+    </div>
+    <div class="card-meta">
+      <span class="meta-item">${svgIcon('calendar')} ${escHtml(dateStr)}</span>
+      <span class="meta-item">${svgIcon('location')} ${escHtml([r.city, r.state].filter(Boolean).join(', ') || 'Location TBD')}</span>
+      ${proximity}
+      ${elev}
+    </div>
+    ${distBadges ? `<div class="distance-badges">${distBadges}</div>` : ''}
+    ${desc}
+    <div class="card-footer">
+      <span class="source-badge">${escHtml(r.source)}</span>
+      ${r.url ? `<a class="btn-register" href="${escHtml(r.url)}" target="_blank" rel="noopener">Register →</a>` : ''}
+    </div>`;
+
+  return card;
+}
+
+function renderPagination(totalPages) {
+  const el = document.getElementById('pagination');
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+  const MAX_VISIBLE = 7;
+  let pages = [];
+
+  if (totalPages <= MAX_VISIBLE) {
+    pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  } else {
+    pages = [1];
+    if (currentPage > 3) pages.push('…');
+    const lo = Math.max(2, currentPage - 1);
+    const hi = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = lo; i <= hi; i++) pages.push(i);
+    if (currentPage < totalPages - 2) pages.push('…');
+    pages.push(totalPages);
+  }
+
+  el.innerHTML = `
+    <button class="page-btn" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>← Prev</button>
+    ${pages.map(p => p === '…'
+      ? `<span class="page-ellipsis">…</span>`
+      : `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`
+    ).join('')}
+    <button class="page-btn" onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>`;
+}
+
+function goPage(p) {
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  if (p < 1 || p > totalPages) return;
+  currentPage = p;
+  render();
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function svgIcon(name) {
+  const icons = {
+    calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+    location: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+    map: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>`,
+    mountain: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3l4 8 5-5 5 15H2L8 3z"/></svg>`,
+  };
+  return icons[name] || '';
+}
+
+// ── Mobile sidebar ──────────────────────────────────────────────────────────
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('overlay').classList.add('visible');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('visible');
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+updateProximityLabel();
+boot();
+</script>
+
+</body>
+</html>
