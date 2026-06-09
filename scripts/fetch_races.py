@@ -314,7 +314,13 @@ def _parse_us_page(html, did, today, end_dt):
 
 
 def fetch_ultrasignup():
-    print("Fetching UltraSignup (DID scan)...")
+    # UltraSignup's REST endpoint is decommissioned and their search page requires
+    # JavaScript rendering. DID scanning is unreliable because upcoming events span
+    # a wide, non-contiguous DID range. Skipping for now.
+    print("UltraSignup: skipped (requires JS rendering — future improvement)")
+    return []
+
+def _fetch_ultrasignup_did_scan():
     session = requests.Session()
     session.headers['User-Agent'] = BROWSER_UA
 
