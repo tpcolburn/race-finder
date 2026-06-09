@@ -140,6 +140,13 @@ def fetch_runsignup():
         if not batch:
             break
 
+        # Debug: dump first race structure on first page so we can inspect the schema
+        if page == 1 and batch:
+            print(f"  DEBUG first race keys: {json.dumps(list((batch[0].get('race', batch[0]) or {}).keys()))}")
+            first_race = batch[0].get('race', batch[0]) or {}
+            nd_sample = first_race.get('next_date') or first_race.get('next_dates') or first_race.get('race_event_days') or []
+            print(f"  DEBUG next_date type={type(nd_sample).__name__} value={json.dumps(nd_sample)[:300]}")
+
         for item in batch:
             race    = item.get('race', item)
             address = race.get('address') or {}
@@ -153,19 +160,36 @@ def fetch_runsignup():
             city  = address.get('city', '')
             state = address.get('state', '')
 
-            next_dates = race.get('next_date') or []
-            if not isinstance(next_dates, list):
+            # next_date may be a list, a single dict, or named differently
+            next_dates = (race.get('next_date')
+                          or race.get('next_dates')
+                          or race.get('race_event_days')
+                          or [])
+            if isinstance(next_dates, dict):
                 next_dates = [next_dates]
+            elif not isinstance(next_dates, list):
+                next_dates = []
 
             all_distances = set()
             first_date = ''
             for nd in next_dates:
-                if isinstance(nd, dict):
-                    if not first_date:
-                        raw_dt = nd.get('event_date', '')
-                        first_date = raw_dt[:10] if raw_dt else ''
-                    for d in normalize_distances(nd.get('distance', '') or nd.get('name', '')):
-                        all_distances.add(d)
+                if not isinstance(nd, dict):
+                    continue
+                # Try multiple field names for the date
+                raw_dt = (nd.get('event_date') or nd.get('start_date')
+                          or nd.get('date') or nd.get('race_date') or '')
+                if raw_dt and not first_date:
+                    first_date = str(raw_dt)[:10]
+                dist_raw = (nd.get('distance') or nd.get('event_distance')
+                            or nd.get('name') or nd.get('event_name') or '')
+                for d in normalize_distances(dist_raw):
+                    all_distances.add(d)
+
+            # Fallback: race-level date fields
+            if not first_date:
+                raw_dt = (race.get('next_event_date') or race.get('start_date')
+                          or race.get('event_date') or '')
+                first_date = str(raw_dt)[:10] if raw_dt else ''
 
             if not first_date:
                 continue
@@ -203,18 +227,20 @@ def fetch_runsignup():
 # ── UltraSignup ───────────────────────────────────────────────────────────────
 
 def _us_max_did(session):
-    """Binary-search for approximate current max DID."""
-    lo, hi = 125_000, 250_000
+    """Binary-search for approximate current max DID by checking for actual event content."""
+    lo, hi = 120_000, 180_000
     while lo < hi - 200:
         mid = (lo + hi) // 2
         try:
-            r = session.head(f'https://ultrasignup.com/register.aspx?did={mid}', timeout=8)
-            if r.status_code == 200:
+            r = session.get(f'https://ultrasignup.com/register.aspx?did={mid}', timeout=10)
+            # A real event page contains "ContentPlaceHolder" and an h2 race name
+            if r.status_code == 200 and 'ContentPlaceHolder' in r.text and '<h2' in r.text and len(r.text) > 8000:
                 lo = mid
             else:
                 hi = mid
         except Exception:
             hi = mid
+    print(f"  UltraSignup max DID found: {lo}")
     return lo
 
 
