@@ -116,11 +116,9 @@ def fetch_runsignup():
                     'page': page,
                     'start_date': start_date,
                     'end_date': end_date,
-                    'country_code': 'US',
-                    'sort': 'date ASC',
-                    'include_race_url': 1,
+                    'events': 'T',
                 },
-                timeout=45,
+                timeout=60,
             )
             resp.raise_for_status()
             data = resp.json()
@@ -210,25 +208,12 @@ def fetch_ultrasignup():
         'Referer': 'https://ultrasignup.com/',
     })
 
-    start_dt = datetime.now()
-    end_dt = start_dt + timedelta(days=365)
-
-    # UltraSignup internal JSON service endpoint
-    url = 'https://ultrasignup.com/service/events.svc/json/search_events_v2'
-
+    # UltraSignup path-based endpoint — http only, no query params for search
     page = 1
     while True:
         try:
-            params = {
-                'distance': '',
-                'type': 'running',
-                'country': 'US',
-                'startdate': start_dt.strftime('%m/%d/%Y'),
-                'enddate': end_dt.strftime('%m/%d/%Y'),
-                'page': page,
-                'per_page': 100,
-            }
-            resp = session.get(url, params=params, timeout=30)
+            url = f'http://ultrasignup.com/service/events.svc/GetFeaturedEventsSearch/p={page}/q='
+            resp = session.get(url, timeout=30, allow_redirects=True)
             resp.raise_for_status()
             data = resp.json()
         except Exception as e:
@@ -236,16 +221,19 @@ def fetch_ultrasignup():
             break
 
         events = data if isinstance(data, list) else (data.get('events') or [])
-        print(f"  page {page}: {len(events)}")
+        # Filter to US only (endpoint returns global results)
+        events = [e for e in events if (e.get('state') or e.get('country', '') or '').upper() not in ('', ) or e.get('country', 'US') == 'US']
+        events = [e for e in events if len(e.get('state', '')) == 2]  # US state codes are 2 chars
+        print(f"  page {page}: {len(events)} US events")
         if not events:
             break
 
         for ev in events:
-            name = (ev.get('event_name') or ev.get('name') or '').strip()
+            name = (ev.get('eventName') or ev.get('event_name') or ev.get('name') or '').strip()
             if not name:
                 continue
 
-            raw_date = ev.get('start_date') or ev.get('date') or ''
+            raw_date = ev.get('eventDate') or ev.get('start_date') or ev.get('date') or ''
             date_str = ''
             for fmt in ('%m/%d/%Y', '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S'):
                 try:
@@ -270,15 +258,15 @@ def fetch_ultrasignup():
             except (ValueError, TypeError):
                 lat = lon = None
 
-            # UltraSignup stores distances as a list of dicts or strings
-            raw_dists = ev.get('distances') or ev.get('distance') or ''
+            # eventDistances is the field name from the GetFeaturedEventsSearch endpoint
+            raw_dists = ev.get('eventDistances') or ev.get('distances') or ev.get('distance') or ''
             dist_set = set()
             if isinstance(raw_dists, list):
                 for d in raw_dists:
-                    dist_name = d.get('distance_name', '') if isinstance(d, dict) else str(d)
+                    dist_name = d.get('distance_name', '') or d.get('distanceName', '') if isinstance(d, dict) else str(d)
                     for cat in normalize_distances(dist_name):
                         dist_set.add(cat)
-            else:
+            elif raw_dists:
                 for cat in normalize_distances(str(raw_dists)):
                     dist_set.add(cat)
 
@@ -291,7 +279,7 @@ def fetch_ultrasignup():
             except (ValueError, TypeError):
                 elev = None
 
-            event_id = ev.get('event_id', '')
+            event_id = ev.get('eventId') or ev.get('event_id', '')
             races.append({
                 'id': f"us_{event_id or make_dedup_key(name, date_str, state)}",
                 'name': name,
@@ -302,7 +290,7 @@ def fetch_ultrasignup():
                 'lat': lat,
                 'lon': lon,
                 'distance_from_solon': haversine(SOLON_LAT, SOLON_LON, lat, lon) if lat and lon else None,
-                'url': f"https://ultrasignup.com/register.aspx?did={event_id}" if event_id else 'https://ultrasignup.com',
+                'url': f"https://ultrasignup.com/register.aspx?did={event_id}" if event_id else 'https://ultrasignup.com/register.aspx',
                 'distances': sorted(dist_set, key=lambda d: DISTANCE_CATEGORIES.index(d) if d in DISTANCE_CATEGORIES else 99),
                 'race_type': 'trail',
                 'elevation_gain': elev,
@@ -333,69 +321,88 @@ def fetch_runreg():
     start_date = datetime.now().strftime('%Y-%m-%d')
     end_date = (datetime.now() + timedelta(days=365)).strftime('%Y-%m-%d')
 
-    try:
-        resp = session.get(
-            'https://www.runreg.com/api/EventSearch.aspx',
-            params={
-                'format': 'json',
-                'country': 'US',
-                'startdate': start_date,
-                'enddate': end_date,
-                'results_per_page': 500,
-            },
-            timeout=30,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception as e:
-        print(f"  RunReg error: {e}")
-        return races
-
-    events = data.get('events', data if isinstance(data, list) else [])
-    print(f"  {len(events)} events")
-
-    for ev in events:
-        name = (ev.get('name') or ev.get('event_name') or '').strip()
-        if not name:
-            continue
-
-        date_str = (ev.get('date') or ev.get('start_date') or '')[:10]
-        city = ev.get('city', '')
-        state = ev.get('state') or ev.get('region', '')
-
+    page = 1
+    while True:
         try:
-            lat = float(ev.get('latitude') or ev.get('lat') or 0) or None
-            lon = float(ev.get('longitude') or ev.get('lng') or ev.get('lon') or 0) or None
-        except (ValueError, TypeError):
-            lat = lon = None
+            resp = session.get(
+                'https://www.runreg.com/api/search',
+                params={
+                    'num': 100,
+                    'page': page,
+                    'startdate': start_date,
+                    'enddate': end_date,
+                },
+                timeout=30,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            print(f"  RunReg page {page} error: {e}")
+            break
 
-        raw_dists = ev.get('distances') or ev.get('distance') or ''
-        dist_set = set()
-        if isinstance(raw_dists, list):
-            for d in raw_dists:
-                for cat in normalize_distances(str(d)):
-                    dist_set.add(cat)
-        else:
-            for cat in normalize_distances(str(raw_dists)):
-                dist_set.add(cat)
+        events = data.get('MatchingEvents', [])
+        print(f"  page {page}: {len(events)} events")
+        if not events:
+            break
 
-        races.append({
-            'id': f"rr_{ev.get('event_id', make_dedup_key(name, date_str, state))}",
-            'name': name,
-            'source': 'RunReg',
-            'date': date_str,
-            'city': city,
-            'state': state,
-            'lat': lat,
-            'lon': lon,
-            'distance_from_solon': haversine(SOLON_LAT, SOLON_LON, lat, lon) if lat and lon else None,
-            'url': ev.get('url') or ev.get('registration_url') or '',
-            'distances': sorted(dist_set, key=lambda d: DISTANCE_CATEGORIES.index(d) if d in DISTANCE_CATEGORIES else 99),
-            'race_type': infer_race_type(name),
-            'elevation_gain': None,
-            'description': (ev.get('description') or '')[:500],
-            'price': ev.get('price'),
-        })
+        for ev in events:
+            name = (ev.get('EventName') or '').strip()
+            if not name:
+                continue
+
+            date_str = (ev.get('EventDate') or '')[:10]
+            city = ev.get('EventCity', '')
+            state = ev.get('EventState', '')
+
+            # Skip non-US entries
+            if state and len(state) != 2:
+                continue
+
+            try:
+                lat = float(ev.get('Latitude') or 0) or None
+                lon = float(ev.get('Longitude') or 0) or None
+            except (ValueError, TypeError):
+                lat = lon = None
+
+            # Categories contains distances + fees
+            categories = ev.get('Categories') or []
+            dist_set = set()
+            for cat in categories:
+                cat_name = cat.get('CategoryName', '') if isinstance(cat, dict) else str(cat)
+                for d in normalize_distances(cat_name):
+                    dist_set.add(d)
+
+            # Also try EventTypes
+            event_types = ev.get('EventTypes') or []
+            for et in event_types:
+                et_name = et.get('TypeName', '') if isinstance(et, dict) else str(et)
+                for d in normalize_distances(et_name):
+                    dist_set.add(d)
+
+            url = ev.get('EventUrl') or ev.get('EventWebsite') or f"https://www.runreg.com{ev.get('EventPermalink', '')}"
+
+            races.append({
+                'id': f"rr_{ev.get('EventId', make_dedup_key(name, date_str, state))}",
+                'name': name,
+                'source': 'RunReg',
+                'date': date_str,
+                'city': city,
+                'state': state,
+                'lat': lat,
+                'lon': lon,
+                'distance_from_solon': haversine(SOLON_LAT, SOLON_LON, lat, lon) if lat and lon else None,
+                'url': url,
+                'distances': sorted(dist_set, key=lambda d: DISTANCE_CATEGORIES.index(d) if d in DISTANCE_CATEGORIES else 99),
+                'race_type': infer_race_type(name),
+                'elevation_gain': None,
+                'description': (ev.get('EventNotes') or '')[:500],
+                'price': None,
+            })
+
+        page += 1
+        if len(events) < 100:
+            break
+        time.sleep(0.3)
 
     print(f"  RunReg total: {len(races)}")
     return races
