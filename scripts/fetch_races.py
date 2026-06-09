@@ -85,7 +85,7 @@ def normalize_distances(raw):
 
 
 def infer_race_type(name, description=''):
-    combined = (name + ' ' + (description or '')).lower()
+    combined = ((name or '') + ' ' + (description or '')).lower()
     for kw in TRAIL_KEYWORDS:
         if kw in combined:
             return 'trail'
@@ -93,7 +93,7 @@ def infer_race_type(name, description=''):
 
 
 def make_dedup_key(name, date, state):
-    key = f"{re.sub(r'[^a-z0-9]', '', name.lower())}_{date}_{state.lower()}"
+    key = f"{re.sub(r'[^a-z0-9]', '', (name or '').lower())}_{date or ''}_{(state or '').lower()}"
     return hashlib.md5(key.encode()).hexdigest()[:10]
 
 
@@ -140,13 +140,6 @@ def fetch_runsignup():
         if not batch:
             break
 
-        # Debug: dump first race structure on first page so we can inspect the schema
-        if page == 1 and batch:
-            print(f"  DEBUG first race keys: {json.dumps(list((batch[0].get('race', batch[0]) or {}).keys()))}")
-            first_race = batch[0].get('race', batch[0]) or {}
-            nd_sample = first_race.get('next_date') or first_race.get('next_dates') or first_race.get('race_event_days') or []
-            print(f"  DEBUG next_date type={type(nd_sample).__name__} value={json.dumps(nd_sample)[:300]}")
-
         for item in batch:
             race    = item.get('race', item)
             address = race.get('address') or {}
@@ -157,42 +150,28 @@ def fetch_runsignup():
             except (ValueError, TypeError):
                 lat = lon = None
 
-            city  = address.get('city', '')
-            state = address.get('state', '')
+            city  = address.get('city') or ''
+            state = address.get('state') or ''
 
-            # next_date may be a list, a single dict, or named differently
-            next_dates = (race.get('next_date')
-                          or race.get('next_dates')
-                          or race.get('race_event_days')
-                          or [])
-            if isinstance(next_dates, dict):
-                next_dates = [next_dates]
-            elif not isinstance(next_dates, list):
-                next_dates = []
-
-            all_distances = set()
+            # next_date is a string in MM/DD/YYYY format (e.g. "08/09/2026")
+            raw_dt = race.get('next_date') or ''
             first_date = ''
-            for nd in next_dates:
-                if not isinstance(nd, dict):
-                    continue
-                # Try multiple field names for the date
-                raw_dt = (nd.get('event_date') or nd.get('start_date')
-                          or nd.get('date') or nd.get('race_date') or '')
-                if raw_dt and not first_date:
-                    first_date = str(raw_dt)[:10]
-                dist_raw = (nd.get('distance') or nd.get('event_distance')
-                            or nd.get('name') or nd.get('event_name') or '')
-                for d in normalize_distances(dist_raw):
-                    all_distances.add(d)
-
-            # Fallback: race-level date fields
-            if not first_date:
-                raw_dt = (race.get('next_event_date') or race.get('start_date')
-                          or race.get('event_date') or '')
-                first_date = str(raw_dt)[:10] if raw_dt else ''
+            if raw_dt and isinstance(raw_dt, str):
+                try:
+                    first_date = datetime.strptime(raw_dt.strip(), '%m/%d/%Y').strftime('%Y-%m-%d')
+                except ValueError:
+                    first_date = raw_dt[:10]
 
             if not first_date:
                 continue
+
+            # Distances come from the events list (included via events=T param)
+            all_distances = set()
+            for ev in (race.get('events') or []):
+                if isinstance(ev, dict):
+                    dist_raw = (ev.get('distance') or ev.get('name') or '')
+                    for d in normalize_distances(dist_raw):
+                        all_distances.add(d)
 
             name = race.get('name', '').strip()
             desc = race.get('description', '') or ''
