@@ -81,7 +81,20 @@ header h1 span { opacity: 0.7; font-weight: 400; font-size: 14px; margin-left: 1
   letter-spacing: 0.8px;
   color: var(--text-muted);
   margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
+.group-toggle {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.group-toggle:hover { color: var(--primary-dark); }
 .filter-section label {
   display: flex;
   align-items: center;
@@ -451,7 +464,7 @@ header h1 span { opacity: 0.7; font-weight: 400; font-size: 14px; margin-left: 1
     <div class="filter-divider"></div>
 
     <div class="filter-section">
-      <h3>Race Surface</h3>
+      <h3>Race Surface <span class="group-toggle" data-group="type-filter" onclick="toggleGroup('type-filter')">none</span></h3>
       <label><input type="checkbox" class="type-filter" value="road"  checked onchange="applyFilters()"> Road</label>
       <label><input type="checkbox" class="type-filter" value="trail" checked onchange="applyFilters()"> Trail</label>
       <label><input type="checkbox" class="type-filter" value="mixed" checked onchange="applyFilters()"> Mixed</label>
@@ -460,7 +473,7 @@ header h1 span { opacity: 0.7; font-weight: 400; font-size: 14px; margin-left: 1
     <div class="filter-divider"></div>
 
     <div class="filter-section">
-      <h3>Distance Category</h3>
+      <h3>Distance Category <span class="group-toggle" data-group="dist-filter" onclick="toggleGroup('dist-filter')">none</span></h3>
       <label><input type="checkbox" class="dist-filter" value="1 Mile"         checked onchange="applyFilters()"> 1 Mile</label>
       <label><input type="checkbox" class="dist-filter" value="5K"             checked onchange="applyFilters()"> 5K</label>
       <label><input type="checkbox" class="dist-filter" value="8K"             checked onchange="applyFilters()"> 8K</label>
@@ -492,7 +505,7 @@ header h1 span { opacity: 0.7; font-weight: 400; font-size: 14px; margin-left: 1
     <div class="filter-divider"></div>
 
     <div class="filter-section">
-      <h3>Data Source</h3>
+      <h3>Data Source <span class="group-toggle" data-group="source-filter" onclick="toggleGroup('source-filter')">none</span></h3>
       <label><input type="checkbox" class="source-filter" value="RunSignUp"  checked onchange="applyFilters()"> RunSignUp</label>
       <label><input type="checkbox" class="source-filter" value="UltraSignup" checked onchange="applyFilters()"> UltraSignup</label>
       <label><input type="checkbox" class="source-filter" value="RunReg"     checked onchange="applyFilters()"> RunReg</label>
@@ -658,6 +671,7 @@ function applyFilters() {
   });
 
   currentPage = 1;
+  syncGroupToggles();
   render();
 }
 
@@ -814,6 +828,23 @@ function svgIcon(name) {
     mountain: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3l4 8 5-5 5 15H2L8 3z"/></svg>`,
   };
   return icons[name] || '';
+}
+
+// ── Group toggles ─────────────────────────────────────────────────────────────
+function toggleGroup(cls) {
+  const boxes = [...document.querySelectorAll(`.${cls}`)];
+  const allChecked = boxes.every(b => b.checked);
+  boxes.forEach(b => { b.checked = !allChecked; });
+  syncGroupToggles();
+  applyFilters();
+}
+
+function syncGroupToggles() {
+  document.querySelectorAll('.group-toggle').forEach(el => {
+    const cls = el.dataset.group;
+    const boxes = [...document.querySelectorAll(`.${cls}`)];
+    el.textContent = boxes.every(b => b.checked) ? 'none' : 'all';
+  });
 }
 
 // ── Mobile sidebar ──────────────────────────────────────────────────────────
