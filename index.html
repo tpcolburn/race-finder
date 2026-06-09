@@ -712,6 +712,12 @@ function render() {
 function buildCard(r) {
   const card = document.createElement('div');
   card.className = 'race-card';
+  if (r.url) {
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', e => {
+      if (!e.target.closest('a')) window.open(r.url, '_blank', 'noopener,noreferrer');
+    });
+  }
 
   const typeClass = r.race_type === 'trail' ? 'type-trail' : r.race_type === 'mixed' ? 'type-mixed' : 'type-road';
   const typeLabel = r.race_type === 'trail' ? 'Trail' : r.race_type === 'mixed' ? 'Mixed' : 'Road';
@@ -732,8 +738,9 @@ function buildCard(r) {
     ? r.distances.map(d => `<span class="dist-badge">${d}</span>`).join('')
     : '';
 
-  const desc = r.description
-    ? `<div style="font-size:12px;color:var(--text-muted);line-height:1.4;margin-top:-2px;">${escHtml(r.description.slice(0, 140))}${r.description.length > 140 ? '…' : ''}</div>`
+  const rawDesc = r.description ? r.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+  const desc = rawDesc
+    ? `<div style="font-size:12px;color:var(--text-muted);line-height:1.4;margin-top:-2px;">${escHtml(rawDesc.slice(0, 140))}${rawDesc.length > 140 ? '…' : ''}</div>`
     : '';
 
   card.innerHTML = `
