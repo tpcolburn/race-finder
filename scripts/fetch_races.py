@@ -265,6 +265,15 @@ def fetch_runsignup():
             name = race.get('name', '').strip()
             desc = race.get('description', '') or ''
 
+            # Skip FFR "Free For Registration" sandbox events and other test entries.
+            # These are organizer test races that appear in the public API but have
+            # broken or empty registration pages.
+            url_slug = (race.get('url') or '').rstrip('/').split('/')[-1].lower()
+            if (url_slug.startswith('ffrtest')
+                    or re.search(r'(?i)\btest(?:ing|run|race|event)?\b', name)
+                    or re.search(r'(?i)\b(demo|template|placeholder)\b', name)):
+                continue
+
             races.append({
                 'id':                  f"rsu_{race.get('race_id', make_dedup_key(name, first_date, state))}",
                 'name':                name,
