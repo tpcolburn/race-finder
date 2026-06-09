@@ -9,14 +9,10 @@ Sources:
 
 import re
 import os
-import io
-import csv
 import json
 import time
-import zipfile
 import hashlib
 import requests
-import urllib.request
 from datetime import datetime, timedelta
 from math import radians, cos, sin, asin, sqrt
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -110,22 +106,23 @@ def sort_distances(dist_set):
 _CITY_COORDS = {}  # (city_lower, state_upper) → (lat, lon)
 
 def load_city_coords():
-    """Download SimpleMaps free US cities CSV and build a city+state → lat/lon lookup."""
+    """Build a (city_lower, state_upper) → (lat, lon) lookup from geonamescache."""
     global _CITY_COORDS
     print("Loading city coordinates lookup...")
-    url = 'https://simplemaps.com/static/data/us-cities/1.79/basic/simplemaps_uscities_basicv1.79.zip'
     try:
-        with urllib.request.urlopen(url, timeout=30) as resp:
-            zf = zipfile.ZipFile(io.BytesIO(resp.read()))
-            csv_name = next(n for n in zf.namelist() if n.endswith('.csv'))
-            with zf.open(csv_name) as f:
-                reader = csv.DictReader(io.TextIOWrapper(f, encoding='utf-8'))
-                for row in reader:
-                    key = (row['city'].lower(), row['state_id'].upper())
-                    try:
-                        _CITY_COORDS[key] = (float(row['lat']), float(row['lng']))
-                    except (ValueError, KeyError):
-                        pass
+        import geonamescache
+        gc = geonamescache.GeonamesCache()
+        for city in gc.get_cities().values():
+            if city.get('countrycode') != 'US':
+                continue
+            state = (city.get('admin1code') or '').upper()
+            key   = (city['name'].lower(), state)
+            _CITY_COORDS[key] = (float(city['latitude']), float(city['longitude']))
+            # Also index alternate names / ASCII name for fuzzy matching
+            for alt in (city.get('alternatenames') or '').split(','):
+                alt = alt.strip()
+                if alt:
+                    _CITY_COORDS[(alt.lower(), state)] = _CITY_COORDS[key]
         print(f"  Loaded {len(_CITY_COORDS):,} city entries")
     except Exception as e:
         print(f"  City lookup failed ({e}), proximity filtering will be limited")
