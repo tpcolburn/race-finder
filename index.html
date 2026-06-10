@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Race Finder</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <style>
 :root {
   --bg: #f4f6f9;
@@ -385,6 +388,127 @@ header h1 span { opacity: 0.7; font-weight: 400; font-size: 14px; margin-left: 1
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── View toggle ── */
+.view-toggle {
+  display: flex;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  background: var(--bg);
+}
+.view-btn {
+  padding: 5px 16px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.view-btn.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  font-weight: 600;
+}
+.view-btn:not(.active):hover { color: var(--text); }
+
+/* ── Summary bar ── */
+.summary-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  box-shadow: var(--shadow);
+}
+.summary-section { flex: 1; min-width: 0; padding: 0 16px; }
+.summary-section:first-child { padding-left: 0; }
+.summary-section:last-child  { padding-right: 0; }
+.summary-divider { width: 1px; background: var(--border); margin: 2px 0; flex-shrink: 0; }
+.summary-section h4 {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 7px;
+}
+.surface-seg-bar {
+  height: 8px;
+  border-radius: 4px;
+  display: flex;
+  overflow: hidden;
+  margin-bottom: 6px;
+  gap: 1px;
+}
+.surface-seg { transition: width 0.3s; }
+.surface-legend { display: flex; gap: 10px; flex-wrap: wrap; }
+.surface-legend-item {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.s-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.dist-bar-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.dist-bar-lbl {
+  width: 90px;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.dist-bar-track { flex: 1; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.dist-bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  opacity: 0.7;
+  transition: width 0.3s;
+}
+.dist-bar-n { font-size: 10px; color: var(--text-muted); width: 36px; flex-shrink: 0; }
+.monthly-spark { display: flex; align-items: flex-end; gap: 3px; height: 38px; }
+.month-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  height: 100%;
+}
+.month-bar {
+  width: 100%;
+  background: var(--primary);
+  border-radius: 2px 2px 0 0;
+  opacity: 0.6;
+  min-height: 2px;
+  transition: height 0.3s;
+}
+.month-lbl { font-size: 8px; color: var(--text-muted); text-align: center; }
+
+/* ── Map container ── */
+#map-container {
+  height: 600px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .layout { grid-template-columns: 1fr; }
@@ -521,6 +645,10 @@ header h1 span { opacity: 0.7; font-weight: 400; font-size: 14px; margin-left: 1
   <main class="main">
     <div class="toolbar">
       <div class="results-count" id="results-count"></div>
+      <div class="view-toggle">
+        <button class="view-btn active" id="btn-list" onclick="setView('list')">≡ List</button>
+        <button class="view-btn"        id="btn-map"  onclick="setView('map')">⊙ Map</button>
+      </div>
       <div class="sort-bar">
         Sort:
         <select id="sort-by" onchange="applyFilters()">
@@ -531,6 +659,10 @@ header h1 span { opacity: 0.7; font-weight: 400; font-size: 14px; margin-left: 1
         </select>
       </div>
     </div>
+
+    <div class="summary-bar" id="summary-bar" style="display:none"></div>
+
+    <div id="map-container" style="display:none"></div>
 
     <div id="races-container">
       <div class="state-message">
@@ -551,6 +683,10 @@ let allRaces = [];
 let filtered = [];
 let currentPage = 1;
 const PER_PAGE = 48;
+let currentView = 'list';
+let mapInitialized = false;
+let leafletMap = null;
+let markerGroup = null;
 
 const SOLON_LAT = 41.3895;
 const SOLON_LON = -81.4412;
@@ -695,13 +831,23 @@ function updateProximityLabel() {
 // ── Rendering ──────────────────────────────────────────────────────────────
 function render() {
   const total = filtered.length;
+  updateSummaryBar(filtered);
+  document.getElementById('mobile-count').textContent = `${total.toLocaleString()} races`;
+
+  if (currentView === 'map') {
+    const mapped = filtered.filter(r => r.lat != null && r.lon != null).length;
+    document.getElementById('results-count').innerHTML =
+      `<strong>${total.toLocaleString()}</strong> races · <span style="color:var(--text-muted)">${mapped.toLocaleString()} on map</span>`;
+    updateMapMarkers(filtered);
+    return;
+  }
+
   const totalPages = Math.ceil(total / PER_PAGE);
   const start = (currentPage - 1) * PER_PAGE;
   const page = filtered.slice(start, start + PER_PAGE);
 
   document.getElementById('results-count').innerHTML =
     `Showing <strong>${page.length}</strong> of <strong>${total.toLocaleString()}</strong> races`;
-  document.getElementById('mobile-count').textContent = `${total.toLocaleString()} races`;
 
   if (!total) {
     document.getElementById('races-container').innerHTML = `
@@ -830,6 +976,148 @@ function svgIcon(name) {
   return icons[name] || '';
 }
 
+// ── View switching ────────────────────────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  document.getElementById('btn-list').classList.toggle('active', v === 'list');
+  document.getElementById('btn-map').classList.toggle('active',  v === 'map');
+  document.getElementById('races-container').style.display = v === 'list' ? '' : 'none';
+  document.getElementById('pagination').style.display      = v === 'list' ? '' : 'none';
+  document.getElementById('map-container').style.display   = v === 'map'  ? 'block' : 'none';
+  if (v === 'map') {
+    if (!mapInitialized) initMap();
+    updateMapMarkers(filtered);
+    setTimeout(() => leafletMap && leafletMap.invalidateSize(), 60);
+  }
+  render();
+}
+
+// ── Map ────────────────────────────────────────────────────────────────────────
+function initMap() {
+  mapInitialized = true;
+  leafletMap = L.map('map-container').setView([SOLON_LAT, SOLON_LON], 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 18,
+  }).addTo(leafletMap);
+
+  // Distance rings centered on Solon
+  [{miles:50,color:'#16a34a'},{miles:100,color:'#2563eb'},{miles:250,color:'#9333ea'}]
+    .forEach(({miles, color}) => {
+      L.circle([SOLON_LAT, SOLON_LON], {
+        radius: miles * 1609.34, color, weight: 1.5,
+        opacity: 0.5, fillOpacity: 0.03, dashArray: '6,4',
+      }).bindTooltip(`${miles} mi`, {permanent: false}).addTo(leafletMap);
+    });
+
+  // Home pin
+  L.circleMarker([SOLON_LAT, SOLON_LON], {
+    radius: 7, color: '#fff', fillColor: '#c00000', fillOpacity: 1, weight: 2,
+  }).bindPopup('<strong>📍 Solon, OH</strong>').addTo(leafletMap);
+
+  markerGroup = L.markerClusterGroup({
+    maxClusterRadius: 50, showCoverageOnHover: false, spiderfyOnMaxZoom: true,
+  });
+  leafletMap.addLayer(markerGroup);
+}
+
+function updateMapMarkers(races) {
+  if (!mapInitialized || !markerGroup) return;
+  markerGroup.clearLayers();
+  const colors = {road:'#2563eb', trail:'#16a34a', mixed:'#9333ea'};
+  const markers = races
+    .filter(r => r.lat != null && r.lon != null)
+    .map(r => {
+      const c = colors[r.race_type] || '#2563eb';
+      const dateStr = r.date
+        ? new Date(r.date + 'T12:00:00').toLocaleDateString('en-US',
+            {month:'short', day:'numeric', year:'numeric'})
+        : 'TBD';
+      const distHtml = (r.distances || []).slice(0, 4)
+        .map(d => `<span style="font-size:10px;padding:1px 6px;background:#f1f5f9;border:1px solid #e2e6ea;border-radius:10px">${d}</span>`)
+        .join(' ');
+      const proxHtml = r.distance_from_solon != null
+        ? `<div style="font-size:11px;color:#2563eb;margin:2px 0">${r.distance_from_solon} mi from Solon</div>` : '';
+      const popup = `<div style="min-width:190px;max-width:255px;font-family:system-ui,sans-serif;line-height:1.4">
+        <div style="font-weight:600;font-size:13px;margin-bottom:3px">
+          ${r.url ? `<a href="${escHtml(r.url)}" target="_blank" style="color:#2563eb;text-decoration:none">${escHtml(r.name)}</a>` : escHtml(r.name)}
+        </div>
+        <div style="font-size:11px;color:#6b7280;margin-bottom:2px">${escHtml(dateStr)} · ${escHtml([r.city,r.state].filter(Boolean).join(', '))}</div>
+        ${proxHtml}
+        ${distHtml ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin:5px 0">${distHtml}</div>` : ''}
+        ${r.url ? `<a href="${escHtml(r.url)}" target="_blank" rel="noopener" style="display:block;margin-top:7px;padding:5px 0;background:#2563eb;color:#fff;border-radius:5px;font-size:11px;font-weight:600;text-decoration:none;text-align:center">Register →</a>` : ''}
+      </div>`;
+      return L.marker([r.lat, r.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="width:10px;height:10px;background:${c};border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>`,
+          iconSize: [10,10], iconAnchor: [5,5], popupAnchor: [0,-8],
+        }),
+      }).bindPopup(popup);
+    });
+  markerGroup.addLayers(markers);
+}
+
+// ── Summary bar ───────────────────────────────────────────────────────────────
+function updateSummaryBar(races) {
+  const el = document.getElementById('summary-bar');
+  if (!races.length) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+
+  // Surface
+  const sc = {road:0, trail:0, mixed:0};
+  races.forEach(r => { if (sc[r.race_type] !== undefined) sc[r.race_type]++; });
+  const surfColors = {road:'#2563eb', trail:'#16a34a', mixed:'#9333ea'};
+  const surfSegs = Object.entries(sc).filter(([,n])=>n>0)
+    .map(([t,n]) => `<div class="surface-seg" style="width:${(n/races.length*100).toFixed(1)}%;background:${surfColors[t]}"></div>`).join('');
+  const surfLegend = Object.entries(sc).filter(([,n])=>n>0)
+    .map(([t,n]) => `<span class="surface-legend-item"><span class="s-dot" style="background:${surfColors[t]}"></span>${t.charAt(0).toUpperCase()+t.slice(1)} ${n.toLocaleString()}</span>`).join('');
+
+  // Top distances
+  const dc = {};
+  races.forEach(r => { (r.distances&&r.distances.length?r.distances:['Other']).forEach(d=>{dc[d]=(dc[d]||0)+1;}); });
+  const topD = Object.entries(dc).sort(([,a],[,b])=>b-a).slice(0,6);
+  const maxD = topD[0]?.[1]||1;
+  const distBars = topD.map(([lbl,n])=>`
+    <div class="dist-bar-row">
+      <div class="dist-bar-lbl">${escHtml(lbl)}</div>
+      <div class="dist-bar-track"><div class="dist-bar-fill" style="width:${(n/maxD*100).toFixed(0)}%"></div></div>
+      <div class="dist-bar-n">${n>=1000?(n/1000).toFixed(1)+'k':n}</div>
+    </div>`).join('');
+
+  // Monthly sparkline (next 12 months)
+  const today = new Date();
+  const months = Array.from({length:12},(_,i)=>{
+    const d = new Date(today.getFullYear(), today.getMonth()+i, 1);
+    return { key:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,
+             lbl: d.toLocaleDateString('en-US',{month:'short'}), count:0 };
+  });
+  const mMap = Object.fromEntries(months.map(m=>[m.key,m]));
+  races.forEach(r => { if(r.date&&mMap[r.date.slice(0,7)]) mMap[r.date.slice(0,7)].count++; });
+  const maxM = Math.max(...months.map(m=>m.count), 1);
+  const monthBars = months.map(m => `
+    <div class="month-col" title="${m.lbl}: ${m.count} races">
+      <div class="month-bar" style="height:${Math.max(4,(m.count/maxM*100)).toFixed(0)}%"></div>
+      <div class="month-lbl">${m.lbl}</div>
+    </div>`).join('');
+
+  el.innerHTML = `
+    <div class="summary-section">
+      <h4>Surface</h4>
+      <div class="surface-seg-bar">${surfSegs}</div>
+      <div class="surface-legend">${surfLegend}</div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-section">
+      <h4>Top Distances</h4>${distBars}
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-section">
+      <h4>By Month</h4>
+      <div class="monthly-spark">${monthBars}</div>
+    </div>`;
+}
+
 // ── Group toggles ─────────────────────────────────────────────────────────────
 function toggleGroup(cls) {
   const boxes = [...document.querySelectorAll(`.${cls}`)];
@@ -862,5 +1150,7 @@ updateProximityLabel();
 boot();
 </script>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 </body>
 </html>
