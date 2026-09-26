@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>London Falling Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+[hidden]{display:none!important}
+html,body{margin:0}
+
+:root{
+  --bg:#EDEFEC; --surface:#F8F9F6; --sunk:#E2E6E2; --ink:#1B2426; --muted:#566265; --line:#C9D0CD;
+  --river:#2F5D66; --river-soft:#C7D8DA; --amber:#B7790F; --amber-soft:#F3E3C2; --land:#E4E8E3; --park:#D5E0D2;
+  --danger:#9C3B2E;
+  --display:"Young Serif", Georgia, "Times New Roman", serif;
+  --body:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#101719; --surface:#172124; --sunk:#0C1214; --ink:#E3E8E6; --muted:#9AA7A9; --line:#2C3A3E;
+    --river:#5E9CA6; --river-soft:#1D3337; --amber:#E4A93F; --amber-soft:#3A2E17; --land:#1A2427; --park:#1C2B26;
+    --danger:#E0806F;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#101719; --surface:#172124; --sunk:#0C1214; --ink:#E3E8E6; --muted:#9AA7A9; --line:#2C3A3E;
+  --river:#5E9CA6; --river-soft:#1D3337; --amber:#E4A93F; --amber-soft:#3A2E17; --land:#1A2427; --park:#1C2B26;
+  --danger:#E0806F;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;padding-inline:16px;padding-block:0 64px}
+.wrap{max-width:1040px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);font-weight:400;line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.3rem,6vw,3.6rem)}
+h2{font-size:1.75rem}
+h3{font-size:1.2rem}
+p{margin:0}
+a{color:var(--river)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.mono{font-family:var(--mono);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tabnums{font-variant-numeric:tabular-nums}
+
+/* hero */
+header.hero{padding-block:40px 20px;display:grid;gap:14px}
+.stamp{font-family:var(--mono);font-size:.8rem;color:var(--amber);letter-spacing:.08em}
+.lede{max-width:62ch;color:var(--muted);font-size:1.05rem}
+
+/* progress bar */
+.progress{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line);margin-bottom:28px}
+.progress .inner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.seg{display:flex;flex-wrap:wrap;gap:4px;background:var(--sunk);padding:4px;border-radius:8px}
+.seg button{font:500 .8rem var(--mono);letter-spacing:.03em;border:0;background:transparent;color:var(--muted);padding:7px 10px;border-radius:5px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg button:hover{color:var(--ink)}
+.progress .hint{font-size:.85rem;color:var(--muted)}
+
+section{margin-bottom:56px}
+.sec-head{display:grid;gap:6px;margin-bottom:18px}
+.sec-head p{color:var(--muted);max-width:65ch}
+
+/* map */
+.map-box{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.map-scroll{overflow-x:auto}
+#map{display:block;width:100%;min-width:560px;height:auto}
+.map-legend{display:flex;flex-wrap:wrap;gap:14px;padding:12px 16px;border-top:1px solid var(--line);font-size:.85rem;color:var(--muted)}
+.map-legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--ink)}
+.place-detail{padding:14px 16px;border-top:1px solid var(--line);min-height:84px;display:grid;gap:4px}
+.place-detail .links{font-size:.88rem}
+
+/* people */
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.person{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:start}
+.mono-badge{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-size:1.1rem;color:var(--surface)}
+.person .name{font-weight:600;line-height:1.25}
+.person .aka{font-family:var(--mono);font-size:.72rem;color:var(--amber);letter-spacing:.04em}
+.person .role{font-size:.92rem;color:var(--muted);margin-top:4px}
+.person .links{font-size:.82rem;margin-top:6px}
+.chip{display:inline-block;font:500 .68rem var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:var(--sunk);color:var(--muted);margin-top:6px}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.filters button{font:500 .78rem var(--mono);border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:5px 10px;border-radius:20px;cursor:pointer}
+.filters button[aria-pressed="true"]{border-color:var(--ink);color:var(--ink)}
+
+/* parts */
+.part{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.part-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line)}
+.part-head .left{display:grid;gap:4px}
+.part-body{padding:20px;display:grid;gap:22px}
+.locked{padding:26px 20px;display:grid;gap:12px;justify-items:start;background:repeating-linear-gradient(135deg,transparent 0 10px,var(--sunk) 10px 11px)}
+.locked p{color:var(--muted)}
+.btn{font:500 .85rem var(--mono);letter-spacing:.03em;background:var(--ink);color:var(--bg);border:0;padding:9px 14px;border-radius:6px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.beats{display:grid;gap:10px;padding:0;margin:0;list-style:none}
+.beats li{display:grid;grid-template-columns:88px 1fr;gap:12px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+.beats li:last-child{border-bottom:0;padding-bottom:0}
+.beats .where{font-family:var(--mono);font-size:.74rem;color:var(--amber);letter-spacing:.04em;padding-top:3px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.fig{border:1px solid var(--line);border-radius:10px;background:var(--bg);overflow:hidden}
+.fig figcaption{padding:10px 14px;font-size:.85rem;color:var(--muted);border-top:1px solid var(--line)}
+.fig .svgwrap{overflow-x:auto}
+.fig svg{display:block;width:100%;height:auto}
+.fig.wide svg{min-width:520px}
+.note{font-size:.9rem;color:var(--muted);border-left:3px solid var(--amber);padding-left:12px;max-width:70ch}
+
+/* identity compare */
+.idcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.idcard{border:1px solid var(--line);border-radius:8px;padding:12px;display:grid;gap:6px;background:var(--bg)}
+.idcard.fake{border-style:dashed;border-color:var(--amber)}
+.idcard dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:.88rem}
+.idcard dt{font-family:var(--mono);font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding-top:3px}
+.idcard dd{margin:0}
+@media (max-width:460px){.idcards{grid-template-columns:1fr}}
+
+/* money chain */
+.chain{display:grid;gap:0;counter-reset:step}
+.chain .step{display:grid;grid-template-columns:70px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.chain .step:last-child{border-bottom:0}
+.chain .yr{font-family:var(--mono);font-size:.85rem;color:var(--amber)}
+.chain .arrow{color:var(--muted);font-family:var(--mono);font-size:.75rem}
+
+/* timeline */
+.tl{position:relative;display:grid;gap:0;padding-left:0;margin:0;list-style:none}
+.tl li{display:grid;grid-template-columns:110px 18px 1fr;gap:10px;align-items:start}
+.tl .when{font-family:var(--mono);font-size:.8rem;color:var(--muted);text-align:right;padding-top:3px}
+.tl .rail{position:relative;align-self:stretch}
+.tl .rail::before{content:"";position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--line)}
+.tl .rail::after{content:"";position:absolute;left:3px;top:8px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--river)}
+.tl li.key .rail::after{background:var(--amber);border-color:var(--amber)}
+.tl .what{padding-bottom:16px}
+.tl .what small{display:block;font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.tl li.hidden-row .what{color:var(--muted);font-style:italic}
+@media (max-width:480px){.tl li{grid-template-columns:78px 16px 1fr}}
+
+footer{border-top:1px solid var(--line);padding-top:18px;font-size:.85rem;color:var(--muted);display:grid;gap:8px}
+@media (prefers-reduced-motion:no-preference){.part-body,.locked{animation:fade .25s ease-out}}
+@keyframes fade{from{opacity:.4}to{opacity:1}}
+
+/* ---------- app layout ---------- */
+body{padding-inline:16px;padding-block:0 48px}
+.app{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:32px;align-items:start}
+.side{position:sticky;top:env(safe-area-inset-top,0px);max-height:100vh;overflow-y:auto;padding-block:24px;display:grid;gap:18px}
+.brand{display:grid;gap:4px}
+.brand .t{font-family:var(--display);font-size:1.35rem;line-height:1.15}
+.brand .s{font-size:.82rem;color:var(--muted)}
+.nav-group{display:grid;gap:2px}
+.nav-group .gl{font-family:var(--mono);font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:6px 10px 4px}
+.nav a{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;text-decoration:none;color:var(--ink);font-size:.93rem}
+.nav a:hover{background:var(--sunk)}
+.nav a[aria-current="page"]{background:var(--ink);color:var(--bg)}
+.nav a.lockd{color:var(--muted)}
+.nav a .tag{font-family:var(--mono);font-size:.66rem;letter-spacing:.04em;opacity:.8}
+.nav a .pin{width:7px;height:7px;border-radius:50%;background:var(--amber);flex:none}
+.nav a.noted .tag::before{content:"✎ ";}
+.prog{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:6px}
+.prog label{font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.prog select{font:inherit;font-size:.9rem;padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.main{padding-block:28px 0;min-width:0}
+.view{display:grid;gap:26px}
+.view[hidden]{display:none}
+.chap-head{display:grid;gap:8px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.chap-head .bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center}
+.pager{display:flex;gap:8px}
+.pager a{font:500 .8rem var(--mono);text-decoration:none;color:var(--ink);border:1px solid var(--line);padding:6px 10px;border-radius:6px;background:var(--surface)}
+.pager a[aria-disabled="true"]{opacity:.35;pointer-events:none}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:grid;gap:16px}
+.panel > .mono{margin-bottom:-6px}
+details.glance{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+details.glance > summary{cursor:pointer;padding:16px 20px;display:flex;justify-content:space-between;gap:12px;align-items:baseline;list-style:none}
+details.glance > summary::-webkit-details-marker{display:none}
+details.glance > summary::after{content:"Show";font:500 .75rem var(--mono);color:var(--river)}
+details.glance[open] > summary::after{content:"Hide"}
+details.glance > .inner{padding:0 20px 20px;display:grid;gap:22px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips a{font-size:.85rem;text-decoration:none;border:1px solid var(--line);border-radius:20px;padding:3px 10px;color:var(--ink);background:var(--bg)}
+.chips a:hover{border-color:var(--ink)}
+.notes textarea{width:100%;min-height:130px;font:inherit;font-size:.95rem;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical}
+.notes .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.saved{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.overview{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.ov{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:6px;text-decoration:none;color:var(--ink)}
+.ov:hover{border-color:var(--ink)}
+.ov .chs{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.ov .chs span{font:500 .7rem var(--mono);padding:2px 6px;border-radius:4px;background:var(--sunk);color:var(--muted)}
+.ov .chs span.on{background:var(--river);color:var(--surface)}
+.menu-toggle{display:none}
+@media (max-width:860px){
+  .app{grid-template-columns:1fr;gap:0}
+  .side{position:static;max-height:none;padding-block:16px 0}
+  .side .nav-wrap{display:none}
+  .side.open .nav-wrap{display:grid;gap:14px}
+  .menu-toggle{display:inline-block}
+  .nav-group{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  .nav-group .gl{grid-column:1/-1}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side">
+    <div class="brand">
+      <span class="stamp">CAM 04 · 29.11.2019 · 02:23</span>
+      <span class="t">London Falling Companion</span>
+      <span class="s">A chapter-by-chapter listening guide to Patrick Radden Keefe's book.</span>
+    </div>
+    <div class="prog">
+      <label for="progress-select">I've listened up to</label>
+      <select id="progress-select"></select>
+    </div>
+    <button class="btn ghost menu-toggle" type="button" id="menu-toggle" aria-expanded="false">Chapters &amp; sections</button>
+    <div class="nav-wrap">
+      <nav class="nav" id="nav" aria-label="Guide sections"></nav>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section class="view" id="view-home"></section>
+    <section class="view" id="view-chapter" hidden></section>
+
+    <section class="view" id="view-map" hidden>
+      <div class="sec-head">
+        <span class="mono">The ground</span>
+        <h1>Map</h1>
+        <p>Tap a pin for what happened there. Pins appear as you unlock each part. The Thames and positions are accurate; streets are left out.</p>
+      </div>
+      <div class="map-box">
+        <div class="map-scroll"><svg id="map" viewBox="0 0 760 420" role="img" aria-label="Map of London with places from the book"></svg></div>
+        <div class="place-detail" id="place-detail" aria-live="polite"></div>
+        <div class="map-legend" id="legend"></div>
+      </div>
+      <div class="sec-head">
+        <span class="mono">Beyond London</span>
+        <h2>Where the threads lead</h2>
+        <p>Direction is roughly true; distance is squeezed so everything fits.</p>
+      </div>
+      <figure class="fig wide" style="margin:0">
+        <div class="svgwrap"><svg id="world" viewBox="0 0 760 420" role="img" aria-label="Connections from London to other places"></svg></div>
+        <figcaption id="world-cap"></figcaption>
+      </figure>
+    </section>
+
+    <section class="view" id="view-people" hidden>
+      <div class="sec-head">
+        <span class="mono">Who's who</span>
+        <h1>People</h1>
+        <p>Everyone you've unlocked so far. Initials stand in for photos; each card links to an image search.</p>
+      </div>
+      <div class="filters" id="filters"></div>
+      <div class="people" id="people"></div>
+    </section>
+
+    <section class="view" id="view-timeline" hidden>
+      <div class="sec-head">
+        <span class="mono">1930 → 2026</span>
+        <h1>Timeline</h1>
+        <p>The book jumps between decades. This puts everything back in order. Locked events show only their year.</p>
+      </div>
+      <ol class="tl" id="timeline"></ol>
+    </section>
+
+    <section class="view" id="view-notes" hidden></section>
+
+    <footer style="margin-top:48px">
+      <p>Built from published reviews, interviews, inquest coverage and public records. Chapters 1 and 7 have content pinned to them exactly; other material is placed by part (Part 1 = Ch 1–6, Part 2 = Ch 7–13, Part 3 = Ch 14–18, Part 4 = Ch 19–22).</p>
+      <p>Your progress and notes are saved in this browser only.</p>
+    </footer>
+  </main>
+</div>
+<script>
+(function(){
+"use strict";
+/* ---------- data ---------- */
+// part: 0 = premise (publisher's description), 1–4 = book parts
+var PARTS = [
+  {n:1, ch:"Chapters 1–6", title:"A boy and his invention"},
+  {n:2, ch:"Chapters 7–13", title:"The father, the fixer and the gangster"},
+  {n:3, ch:"Chapters 14–18", title:"The city that launders"},
+  {n:4, ch:"Chapters 19–22", title:"The search for the truth"}
+];
+
+var GROUPS = {
+  family:{label:"Brettler family", color:"#2F5D66"},
+  shamji:{label:"Shamji circle", color:"#8A5A1B"},
+  under:{label:"Underworld", color:"#9C3B2E"},
+  power:{label:"Money & power", color:"#5B4E7A"},
+  record:{label:"Investigators & writers", color:"#4F6B4A"}
+};
+
+function img(q){ return "https://www.google.com/search?tbm=isch&q=" + encodeURIComponent(q); }
+function wiki(t){ return "https://en.wikipedia.org/wiki/" + t; }
+
+var PEOPLE = [
+  {id:"zac", name:"Zac Brettler", aka:"posed as “Zac Ismailov”", part:0, g:"family",
+   role:"Born 20 September 2000, raised in Maida Vale. Quick-witted, with a memory for supercars and gadgets. Died aged 19 after a fall from a Thames-side balcony.", q:"Zac Brettler"},
+  {id:"rachelle", name:"Rachelle Brettler", part:0, g:"family",
+   role:"Zac's mother, daughter of Rabbi Hugo Gryn. With Matthew, spends years trying to find out what happened.", q:"Rachelle Brettler"},
+  {id:"matthew", name:"Matthew Brettler", part:0, g:"family",
+   role:"Zac's father. Entered finance in the City around the 1986 ‘Big Bang’. Methodical: he writes detectives a six-page, single-spaced chronology.", q:"Matthew Brettler"},
+  {id:"gryn", name:"Rabbi Hugo Gryn", part:1, g:"family",
+   role:"Zac's grandfather. Auschwitz survivor, rabbi, and a familiar BBC voice (Radio 4's Thought for the Day). Died 1996.", q:"Rabbi Hugo Gryn", w:"Hugo_Gryn"},
+  {id:"brother", name:"Zac's older brother", part:1, g:"family",
+   role:"Zac was the second of two sons.", q:null},
+  {id:"akbar", name:"Akbar Shamji", part:1, g:"shamji",
+   role:"Cambridge-educated businessman in his forties, based in Mayfair. Polished surface, a string of ventures. Becomes Zac's mentor after an introduction through people around Chelsea FC.", q:"Akbar Shamji"},
+  {id:"abramovich", name:"Roman Abramovich", part:1, g:"power",
+   role:"Russian oligarch, then owner of Chelsea FC. Zac met someone who worked for the club at an art opening; that circle led to Akbar.", q:"Roman Abramovich", w:"Roman_Abramovich"},
+  {id:"abdul", name:"Abdul Shamji", part:2, g:"shamji",
+   role:"Akbar's father. Ugandan Asian tycoon who ran the Gomba Group, escaped Idi Amin in 1972, rebuilt in Britain (hotels, the Garrick and Mermaid theatres), claimed friendship with Thatcher, and was jailed in 1989 for perjury after the Johnson Matthey Bank collapse.", q:"Abdul Shamji", w:"Abdul_Shamji"},
+  {id:"amin", name:"Idi Amin", part:2, g:"power",
+   role:"Ugandan dictator who in 1972 ordered the expulsion of the country's entire Asian population.", q:"Idi Amin", w:"Idi_Amin"},
+  {id:"thatcher", name:"Margaret Thatcher", part:2, g:"power",
+   role:"Prime Minister. Abdul Shamji cultivated the Conservative Party and was described as a claimed friend of hers and of Norman Tebbit.", q:"Margaret Thatcher 1985", w:"Margaret_Thatcher"},
+  {id:"sharma", name:"Verinder Sharma", aka:"“Indian Dave”", part:2, g:"under",
+   role:"Veteran London gangster and extortionist with drug-trade links. Wanted over the 2004 killing of Dave King, then hunted across Europe. Lived in the Riverwalk flat Zac fell from. Found dead there in December 2020, aged 56.", q:"Verinder Sharma Indian Dave"},
+  {id:"king", name:"Dave “Muscles” King", part:2, g:"under",
+   role:"Former bodyguard and nightclub figure shot dead outside a gym in Hoddesdon, Hertfordshire, in 2004. Sharma was implicated.", q:"Dave Muscles King Hoddesdon"},
+  {id:"young", name:"Scot Young", part:3, g:"power",
+   role:"Scottish fixer who helped Boris Berezovsky move and hide money. Part of the ‘Cipriani Five’. After a bitter divorce he died in 2014 in a fall onto railings in Marylebone. A death that echoes Zac's.", q:"Scot Young", w:"Scot_Young"},
+  {id:"michelle", name:"Michelle Young", part:3, g:"power",
+   role:"Scot Young's ex-wife. Argued in court he was hiding a fortune; he was jailed for six months for failing to disclose his finances.", q:"Michelle Young divorce"},
+  {id:"berezovsky", name:"Boris Berezovsky", part:3, g:"power",
+   role:"Exiled Russian billionaire and Putin opponent. Found hanged at his Berkshire home in 2013.", q:"Boris Berezovsky", w:"Boris_Berezovsky_(businessman)"},
+  {id:"mcavoy", name:"Micky McAvoy", part:3, g:"under",
+   role:"Led the 1983 Brink's-Mat gold robbery at Heathrow. The laundered gold fed London's property boom.", q:"Micky McAvoy Brinks-Mat", w:"Brink%27s-Mat_robbery"},
+  {id:"keefe", name:"Patrick Radden Keefe", part:4, g:"record",
+   role:"The author, a New Yorker staff writer (Say Nothing, Empire of Pain). His New Yorker article on Zac ran on 5 February 2024.", q:"Patrick Radden Keefe", w:"Patrick_Radden_Keefe"},
+  {id:"pogrund", name:"Gabriel Pogrund", part:4, g:"record",
+   role:"Sunday Times journalist who knew Zac as a little boy. His team published maps from GPS data the police had overlooked, which challenge Akbar's account of the night.", q:"Gabriel Pogrund"},
+  {id:"burgum", name:"Doug Burgum", part:4, g:"power",
+   role:"Governor of North Dakota. In June 2022 he announced Akbar Shamji's crypto company Bitzero's plans for the state and praised him as ‘Cambridge trained’.", q:"Doug Burgum Bitzero", w:"Doug_Burgum"}
+];
+
+// lat/lon for pins inside the map; off:true for edge arrows
+var PLACES = [
+  {id:"riverwalk", name:"Riverwalk, Millbank", part:0, lat:51.4895, lon:-0.1290,
+   text:"A luxury riverside block on the Pimlico side of Vauxhall Bridge. The fifth-floor flat, owned by a Saudi princess, is where Zac went over the balcony.", q:"Riverwalk Millbank London"},
+  {id:"mi6", name:"MI6 building, Vauxhall Cross", part:0, lat:51.4872, lon:-0.1243,
+   text:"Headquarters of the Secret Intelligence Service, directly across the river. One of its cameras caught the figure on the balcony at 2:23 am.", q:"MI6 building Vauxhall Cross", w:"SIS_Building"},
+  {id:"maida", name:"Maida Vale", part:1, lat:51.5270, lon:-0.1880,
+   text:"‘Quietly prosperous’ north-west London. The Brettlers lived in a mansion flat here; Zac was the neighbourhood pied piper to younger kids.", q:"Maida Vale mansion blocks", w:"Maida_Vale"},
+  {id:"millhill", name:"Mill Hill School", part:1, off:"NW", dist:"~11 km north-west",
+   text:"Private school in north London where Zac mixed with the children of newly arrived Russian oligarchs, and first saw the designer clothes and supercars up close.", q:"Mill Hill School London", w:"Mill_Hill_School"},
+  {id:"city", name:"The City of London", part:1, lat:51.5140, lon:-0.0900,
+   text:"The financial district. The 1986 ‘Big Bang’ deregulation, when Matthew entered finance, turned London into a global money hub.", q:"City of London 1986 Big Bang", w:"Big_Bang_(financial_markets)"},
+  {id:"synagogue", name:"West London Synagogue", part:1, lat:51.5150, lon:-0.1620,
+   text:"Hugo Gryn's congregation for decades, on Upper Berkeley Street near Marble Arch.", q:"West London Synagogue Upper Berkeley Street", w:"West_London_Synagogue"},
+  {id:"chelsea", name:"Stamford Bridge (Chelsea FC)", part:1, lat:51.4817, lon:-0.1910,
+   text:"Chelsea was owned by Roman Abramovich. A club employee Zac met at an art opening opened the door to the circle around Akbar.", q:"Stamford Bridge Chelsea", w:"Stamford_Bridge_(stadium)"},
+  {id:"mayfair", name:"Mayfair", part:1, lat:51.5100, lon:-0.1480,
+   text:"London's most exclusive district, and Akbar Shamji's home turf.", q:"Mayfair London", w:"Mayfair"},
+  {id:"garrick", name:"Garrick Theatre", part:2, lat:51.5100, lon:-0.1275,
+   text:"West End theatre that came under Abdul Shamji's Gomba Group.", q:"Garrick Theatre London", w:"Garrick_Theatre"},
+  {id:"mermaid", name:"Mermaid Theatre", part:2, lat:51.5112, lon:-0.1023,
+   text:"Theatre at Puddle Dock, Blackfriars, also part of Abdul Shamji's empire.", q:"Mermaid Theatre Puddle Dock", w:"Mermaid_Theatre"},
+  {id:"hoddesdon", name:"Hoddesdon, Hertfordshire", part:2, off:"N", dist:"~27 km north",
+   text:"Dave ‘Muscles’ King was shot dead outside a gym here in 2004. Sharma was implicated and fled.", q:"Hoddesdon Hertfordshire", w:"Hoddesdon"},
+  {id:"heathrow", name:"Heathrow (Brink's-Mat)", part:3, off:"W", dist:"~24 km west",
+   text:"26 November 1983: robbers took £26m of gold bullion from the Brink's-Mat warehouse near Heathrow. The gold was held for Johnson Matthey.", q:"Brinks-Mat robbery 1983 Heathrow", w:"Brink%27s-Mat_robbery"},
+  {id:"docklands", name:"Docklands & Canary Wharf", part:3, lat:51.5050, lon:-0.0200,
+   text:"Derelict docks rebuilt in the 1980s–90s. Laundered Brink's-Mat money is believed to have gone into property here, one model for the riverside towers of today.", q:"London Docklands 1980s redevelopment", w:"London_Docklands"},
+  {id:"marylebone", name:"Montagu Square, Marylebone", part:3, lat:51.5180, lon:-0.1600,
+   text:"Scot Young died here in December 2014, impaled on railings below a fourth-floor window.", q:"Montagu Square Marylebone", w:"Montagu_Square"},
+  {id:"coroner", name:"Westminster Coroner's Court", part:3, lat:51.4957, lon:-0.1330,
+   text:"Where the inquest into Zac's death was held. In December 2022 it returned an open conclusion.", q:"Westminster Coroner's Court Horseferry Road"}
+];
+
+var WORLD = [
+  {name:"Moscow", part:1, bearing:62, km:2500, text:"Home of Zac's invented oligarch father"},
+  {name:"Berehovo, Ukraine", part:1, bearing:103, km:1600, text:"Hugo Gryn's birthplace (then Czechoslovakia)"},
+  {name:"Kampala, Uganda", part:2, bearing:142, km:6500, text:"Abdul Shamji's first empire, lost in 1972"},
+  {name:"Cannes, France", part:2, bearing:157, km:1050, text:"Where Sharma took the call after the King shooting"},
+  {name:"Saudi Arabia", part:2, bearing:118, km:4900, text:"The Riverwalk flat's owner, a Saudi princess"},
+  {name:"Nekoma, North Dakota", part:4, bearing:302, km:6300, text:"Cold War missile site Akbar's Bitzero planned to mine crypto at"}
+];
+
+var EVENTS = [
+  {y:"1930", t:"Hugo Gryn born in Berehovo, Czechoslovakia.", p:1},
+  {y:"1944", t:"Gryn, aged 13, is deported to Auschwitz. He survives.", p:1},
+  {y:"1972", t:"Idi Amin expels Uganda's Asians. Abdul Shamji is jailed, escapes, and gets to London.", p:2},
+  {y:"Nov 1983", t:"Brink's-Mat robbery at Heathrow: about £26m in gold.", p:3},
+  {y:"Oct 1984", t:"Johnson Matthey Bankers collapses and is rescued by the Bank of England. Shamji's Gomba is among its big debtors.", p:2},
+  {y:"Oct 1986", t:"The City's ‘Big Bang’ deregulation. Matthew Brettler's finance career begins in this era.", p:1},
+  {y:"1989", t:"Abdul Shamji sentenced to 15 months for perjury.", p:2},
+  {y:"1996", t:"Hugo Gryn dies.", p:1},
+  {y:"Sep 2000", t:"Zac Brettler born, 20 September.", p:0},
+  {y:"2004", t:"Dave ‘Muscles’ King shot dead in Hoddesdon. Sharma implicated; Interpol hunts him across Europe.", p:2},
+  {y:"Mar 2013", t:"Boris Berezovsky found hanged at his Berkshire home.", p:3},
+  {y:"Dec 2014", t:"Scot Young dies after a fall in Marylebone.", p:3},
+  {y:"2010s", t:"At Mill Hill School, Zac mixes with oligarchs' children. Later, as ‘Zac Ismailov’, he meets Akbar Shamji.", p:1},
+  {y:"2019", t:"Zac, claiming a family dispute over his inheritance, moves into Sharma's Riverwalk flat. Sharma grows furious waiting for a payout.", p:2},
+  {y:"29 Nov 2019 · 02:23", t:"An MI6 camera records a figure on the Riverwalk balcony. After about a minute, he jumps.", p:0, key:true},
+  {y:"29 Nov 2019", t:"A passerby finds Zac's body face-down on the foreshore after dawn.", p:0, key:true},
+  {y:"Dec 2019", t:"Four days later, Akbar Shamji and Verinder Sharma are arrested on suspicion of murder. Both are released.", p:3},
+  {y:"Dec 2020", t:"Sharma found dead of an overdose in the same Millbank flat.", p:3},
+  {y:"Jun 2022", t:"Governor Burgum announces Bitzero's North Dakota plans with Akbar Shamji.", p:4},
+  {y:"Dec 2022", t:"Inquest returns an open conclusion. A pathologist notes a broken jaw the fall doesn't explain.", p:3},
+  {y:"Feb 2024", t:"Keefe's New Yorker article on Zac is published.", p:4},
+  {y:"Apr 2024", t:"The Sunday Times publishes GPS maps the Met overlooked, contradicting Akbar's account.", p:4},
+  {y:"Apr 2026", t:"London Falling is published.", p:4}
+];
+
+/* ---------- helpers ---------- */
+var NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent, text){
+  var e = document.createElementNS(NS, tag);
+  for (var k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+function partLabel(p){ return p === 0 ? "Premise" : "Part " + p; }
+function linksHtml(q, w){
+  var out = [];
+  if (q) out.push('<a href="' + img(q) + '" target="_blank" rel="noopener">See photos</a>');
+  if (w) out.push('<a href="' + wiki(w) + '" target="_blank" rel="noopener">Background</a>');
+  return out.join(" · ");
+}
+
+/* ---------- London map ---------- */
+var BOUNDS = {w:-0.215, e:0.005, s:51.468, n:51.536};
+var MW = 760, MH = 420;
+function proj(lat, lon){
+  var kx = Math.cos(51.54*Math.PI/180);
+  var spanX = (BOUNDS.e-BOUNDS.w)*kx, spanY = BOUNDS.n-BOUNDS.s;
+  var scale = Math.min((MW-60)/spanX, (MH-60)/spanY);
+  return [30 + (lon-BOUNDS.w)*kx*scale, 30 + (BOUNDS.n-lat)*scale];
+}
+var THAMES = [[51.4700,-0.2650],[51.4720,-0.2500],[51.4840,-0.2400],[51.4900,-0.2300],[51.4850,-0.2220],[51.4680,-0.2140],
+  [51.4640,-0.1980],[51.4660,-0.1860],[51.4760,-0.1780],[51.4820,-0.1680],[51.4850,-0.1530],[51.4860,-0.1400],[51.4880,-0.1270],
+  [51.4940,-0.1225],[51.5010,-0.1220],[51.5080,-0.1180],[51.5095,-0.1040],[51.5080,-0.0880],[51.5060,-0.0750],[51.5045,-0.0580],
+  [51.5075,-0.0360],[51.5020,-0.0265],[51.4900,-0.0240],[51.4855,-0.0110],[51.4900,0.0000],[51.5050,0.0050]];
+var PARKS = [ // [lat, lon, rx(deg lon), ry(deg lat), name]
+  [51.5073,-0.1657,0.013,0.0045,""],[51.5313,-0.1570,0.010,0.0055,"Regent's Park"],[51.4790,-0.1580,0.007,0.004,""]
+];
+
+function renderMap(){
+  var svg = document.getElementById("map");
+  svg.innerHTML = "";
+  el("rect",{x:0,y:0,width:MW,height:MH,fill:"var(--land)"},svg);
+  PARKS.forEach(function(p){
+    var c = proj(p[0],p[1]); var r = proj(p[0]-p[3], p[1]+p[2]);
+    el("ellipse",{cx:c[0],cy:c[1],rx:Math.abs(r[0]-c[0]),ry:Math.abs(r[1]-c[1]),fill:"var(--park)"},svg);
+    el("text",{x:c[0],y:c[1]+4,"text-anchor":"middle","font-family":"IBM Plex Mono, monospace","font-size":"9",fill:"var(--muted)"},svg,p[4]);
+  });
+  var d = THAMES.map(function(pt,i){ var q = proj(pt[0],pt[1]); return (i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1); }).join(" ");
+  el("path",{d:d,fill:"none",stroke:"var(--river-soft)","stroke-width":"16","stroke-linecap":"round","stroke-linejoin":"round"},svg);
+  el("path",{d:d,fill:"none",stroke:"var(--river)","stroke-width":"2.2","stroke-linejoin":"round",opacity:".7"},svg);
+  var tl = proj(51.4655,-0.2250);
+  el("text",{x:tl[0],y:tl[1]+22,"font-family":"Young Serif, Georgia, serif","font-style":"italic","font-size":"15",fill:"var(--river)"},svg,"River Thames");
+
+  // scale bar: 2 km
+  var a = proj(51.470,-0.080), b = proj(51.470,-0.080+2/(111.32*Math.cos(51.47*Math.PI/180)));
+  el("line",{x1:a[0],y1:MH-28,x2:b[0],y2:MH-28,stroke:"var(--ink)","stroke-width":"2"},svg);
+  el("text",{x:a[0],y:MH-36,"font-family":"IBM Plex Mono, monospace","font-size":"10",fill:"var(--muted)"},svg,"2 km");
+  // north arrow
+  el("path",{d:"M"+(MW-40)+" 60 L"+(MW-32)+" 40 L"+(MW-24)+" 60 Z",fill:"var(--ink)"},svg);
+  el("text",{x:MW-32,y:76,"text-anchor":"middle","font-family":"IBM Plex Mono, monospace","font-size":"10",fill:"var(--muted)"},svg,"N");
+
+  var visible = PLACES.filter(function(p){ return unlocked(p.part); });
+  if (!visible.some(function(p){ return p.id === selectedPlace; })) selectedPlace = "riverwalk";
+
+  // CCTV sightline between MI6 and Riverwalk
+  var rw = proj(51.4895,-0.1290), m6 = proj(51.4872,-0.1243);
+  el("line",{x1:m6[0],y1:m6[1],x2:rw[0],y2:rw[1],stroke:"var(--amber)","stroke-width":"1.5","stroke-dasharray":"3 3"},svg);
+
+  visible.forEach(function(p){
+    var g = el("g",{tabindex:"0",role:"button","aria-label":p.name,style:"cursor:pointer"},svg);
+    var color = p.part === 0 ? "var(--amber)" : ["","#2F5D66","#8A5A1B","#5B4E7A","#4F6B4A"][p.part];
+    var sel = p.id === selectedPlace;
+    if (p.off){
+      var pos, arrow, tx, ty;
+      if (p.off === "N"){ pos = [560, 34]; arrow = "M"+pos[0]+" "+(pos[1]-14)+" l-9 14 h18 Z"; tx = pos[0]+14; ty = pos[1]-2; }
+      else if (p.off === "NW"){ pos = [40, 34]; arrow = "M"+(pos[0]-12)+" "+(pos[1]-12)+" l16 3 l-13 13 Z"; tx = pos[0]+8; ty = pos[1]-2; }
+      else { pos = [44, 330]; arrow = "M"+(pos[0]-16)+" "+pos[1]+" l14 -9 v18 Z"; tx = pos[0]+4; ty = pos[1]+4; }
+      el("path",{d:arrow,fill:color},g);
+      el("text",{x:tx,y:ty,"font-family":"Source Serif 4, Georgia, serif","font-size":"13","font-weight": sel?"600":"400",fill:"var(--ink)"},g,p.name.split(" (")[0]);
+      el("text",{x:tx,y:ty+14,"font-family":"IBM Plex Mono, monospace","font-size":"9.5",fill:"var(--muted)"},g,p.dist);
+    } else {
+      var c = proj(p.lat,p.lon);
+      if (sel) el("circle",{cx:c[0],cy:c[1],r:13,fill:"none",stroke:color,"stroke-width":"2",opacity:".5"},g);
+      el("circle",{cx:c[0],cy:c[1],r:7,fill:color,stroke:"var(--surface)","stroke-width":"2.5"},g);
+      var left = ["mi6","coroner","docklands","mermaid"].indexOf(p.id) === -1 && c[0] > MW-170;
+      var below = ["mi6","coroner"].indexOf(p.id) !== -1;
+      var lx = left ? c[0]-12 : c[0]+12, ly = below ? c[1]+ (p.id==="mi6"?18:-12) : c[1]+4;
+      if (p.id === "mi6") lx = c[0]+10;
+      if (p.id === "coroner") { lx = c[0]-12; ly = c[1]-10; }
+      var LBL = {synagogue:[-12,14,"end"], mayfair:[-12,16,"end"], marylebone:[12,-6,"start"], garrick:[-10,-10,"end"], mermaid:[10,18,"start"], city:[10,-10,"start"], riverwalk:[-12,4,"end"]};
+      var anchorOverride = null;
+      if (LBL[p.id]) { lx = c[0]+LBL[p.id][0]; ly = c[1]+LBL[p.id][1]; anchorOverride = LBL[p.id][2]; }
+      var t = el("text",{x:lx,y:ly,"text-anchor":anchorOverride||((left||p.id==="coroner")?"end":"start"),"font-family":"Source Serif 4, Georgia, serif","font-size":"13","font-weight":sel?"600":"400",fill:"var(--ink)",
+        "paint-order":"stroke",stroke:"var(--land)","stroke-width":"4","stroke-linejoin":"round"},g,p.name.replace(/, .*$/,"").replace(/ \(.*\)/,""));
+    }
+    function pick(){ selectedPlace = p.id; renderMap(); }
+    g.addEventListener("click", pick);
+    g.addEventListener("keydown", function(ev){ if (ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); pick(); }});
+  });
+
+  var sp = PLACES.filter(function(p){ return p.id === selectedPlace; })[0];
+  document.getElementById("place-detail").innerHTML =
+    '<span class="mono">' + partLabel(sp.part) + '</span><h3>' + esc(sp.name) + '</h3><p>' + esc(sp.text) + '</p><p class="links">' + linksHtml(sp.q, sp.w) + '</p>';
+
+  var lg = document.getElementById("legend");
+  var items = [["Premise","var(--amber)",0],["Part 1","#2F5D66",1],["Part 2","#8A5A1B",2],["Part 3","#5B4E7A",3]];
+  lg.innerHTML = items.filter(function(i){ return unlocked(i[2]); }).map(function(i){
+    return '<span><i class="dot" style="background:'+i[1]+'"></i>'+i[0]+'</span>';
+  }).join("") + '<span><svg width="22" height="6" aria-hidden="true"><line x1="0" y1="3" x2="22" y2="3" stroke="var(--amber)" stroke-dasharray="3 3" stroke-width="1.5"/></svg>MI6 camera view</span>';
+}
+
+/* ---------- world spokes ---------- */
+function renderWorld(){
+  var svg = document.getElementById("world");
+  svg.innerHTML = "";
+  var cx = 380, cy = 210;
+  [70,130,190].forEach(function(r,i){
+    el("circle",{cx:cx,cy:cy,r:r,fill:"none",stroke:"var(--line)","stroke-dasharray":"2 4"},svg);
+    el("text",{x:cx+4,y:cy-r-4,"font-family":"IBM Plex Mono, monospace","font-size":"9",fill:"var(--muted)"},svg,["1,000 km","3,000 km","7,000 km"][i]);
+  });
+  var shown = WORLD.filter(function(w){ return unlocked(w.part); });
+  shown.forEach(function(w){
+    var r = w.km <= 1000 ? 70*w.km/1000 : w.km <= 3000 ? 70 + 60*(w.km-1000)/2000 : 130 + 60*(w.km-3000)/4000;
+    var a = (w.bearing-90)*Math.PI/180;
+    var x = cx + r*Math.cos(a), y = cy + r*Math.sin(a);
+    var color = ["","#2F5D66","#8A5A1B","#5B4E7A","#4F6B4A"][w.part];
+    el("line",{x1:cx,y1:cy,x2:x,y2:y,stroke:color,"stroke-width":"1.6"},svg);
+    el("circle",{cx:x,cy:y,r:5,fill:color},svg);
+    var right = x >= cx;
+    var t = el("text",{x:x+(right?9:-9),y:y-3,"text-anchor":right?"start":"end","font-family":"Source Serif 4, Georgia, serif","font-size":"13","font-weight":"600",fill:"var(--ink)"},svg,w.name);
+    el("text",{x:x+(right?9:-9),y:y+11,"text-anchor":right?"start":"end","font-family":"Source Serif 4, Georgia, serif","font-size":"11",fill:"var(--muted)"},svg,w.text);
+  });
+  el("circle",{cx:cx,cy:cy,r:8,fill:"var(--amber)"},svg);
+  el("text",{x:cx,y:cy+24,"text-anchor":"middle","font-family":"Young Serif, Georgia, serif","font-size":"15",fill:"var(--ink)"},svg,"London");
+  document.getElementById("world-cap").textContent = shown.length ?
+    "Distances are straight-line, from London. Rings are not evenly spaced." : "Spokes appear as you unlock parts.";
+}
+
+/* ---------- part diagrams ---------- */
+function balconyFig(){
+  return '<figure class="fig wide" style="margin:0"><div class="svgwrap"><svg viewBox="0 0 640 300" role="img" aria-label="Cross-section of the river at Millbank">' +
+  // sky/land
+  '<rect x="0" y="0" width="640" height="300" fill="var(--bg)"/>' +
+  // river
+  '<path d="M150 214 Q320 206 470 214 L470 300 L150 300 Z" fill="var(--river-soft)"/>' +
+  '<text x="310" y="262" text-anchor="middle" font-family="Young Serif, Georgia, serif" font-style="italic" font-size="15" fill="var(--river)">River Thames · about 250 m across</text>' +
+  // south bank MI6
+  '<rect x="30" y="92" width="120" height="122" fill="var(--sunk)" stroke="var(--line)"/>' +
+  '<rect x="52" y="66" width="76" height="26" fill="var(--sunk)" stroke="var(--line)"/>' +
+  '<text x="90" y="160" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">MI6</text>' +
+  '<text x="90" y="174" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">VAUXHALL CROSS</text>' +
+  '<rect x="0" y="214" width="150" height="86" fill="var(--land)"/>' +
+  '<circle cx="146" cy="104" r="5" fill="var(--amber)"/><text x="140" y="96" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--amber)">CAMERA</text>' +
+  // sightline
+  '<line x1="146" y1="104" x2="478" y2="72" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="4 4"/>' +
+  // north bank Riverwalk
+  '<rect x="470" y="214" width="170" height="86" fill="var(--land)"/>' +
+  '<rect x="470" y="196" width="14" height="18" fill="var(--line)"/>' +
+  '<text x="476" y="290" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--muted)">FORESHORE</text>' +
+  '<rect x="500" y="46" width="120" height="168" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.2"/>' +
+  [0,1,2,3,4].map(function(i){ var y = 214 - (i+1)*32; return '<line x1="500" y1="'+(y+32)+'" x2="620" y2="'+(y+32)+'" stroke="var(--line)"/><text x="612" y="'+(y+22)+'" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" fill="var(--muted)">'+(i+1)+'</text>'; }).join("") +
+  '<rect x="484" y="70" width="16" height="4" fill="var(--ink)"/>' +
+  '<line x1="486" y1="70" x2="486" y2="60" stroke="var(--ink)"/>' +
+  '<circle cx="492" cy="62" r="3.5" fill="var(--amber)"/>' +
+  '<text x="560" y="36" text-anchor="middle" font-family="Young Serif, Georgia, serif" font-size="13" fill="var(--ink)">Riverwalk, Millbank</text>' +
+  '<path d="M490 76 Q482 150 474 204" fill="none" stroke="var(--danger)" stroke-width="1.4" stroke-dasharray="2 3"/>' +
+  // callouts
+  '<text x="300" y="60" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink)">02:23 · figure on 5th-floor balcony</text>' +
+  '<text x="300" y="74" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--muted)">paces for about a minute, then jumps</text>' +
+  '<text x="376" y="196" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--danger)">hip clips the embankment wall</text>' +
+  '<text x="376" y="232" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--ink)">found face-down after dawn ➜</text>' +
+  '</svg></div><figcaption>Chapter 1. The opening scene, in cross-section. Not to scale: the camera sits across the river, on the south bank.</figcaption></figure>';
+}
+
+function familyFig(){
+  var c = "var(--ink)", m = "var(--muted)";
+  function box(x,y,w,name,sub,accent){ return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="46" rx="6" fill="var(--surface)" stroke="'+(accent?"var(--amber)":"var(--line)")+'" stroke-width="'+(accent?2:1)+'"/>' +
+    '<text x="'+(x+w/2)+'" y="'+(y+20)+'" text-anchor="middle" font-family="Source Serif 4, Georgia, serif" font-size="13.5" font-weight="600" fill="'+c+'">'+name+'</text>' +
+    '<text x="'+(x+w/2)+'" y="'+(y+36)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="'+m+'">'+sub+'</text>'; }
+  return '<figure class="fig" style="margin:0"><div class="svgwrap"><svg viewBox="0 0 420 250" role="img" aria-label="Brettler family tree">' +
+    box(20,14,170,"Rabbi Hugo Gryn","1930–1996 · Auschwitz survivor") +
+    box(230,14,170,"Matthew's father","Holocaust survivor") +
+    '<line x1="105" y1="60" x2="105" y2="96" stroke="var(--line)" stroke-width="1.5"/><line x1="315" y1="60" x2="315" y2="96" stroke="var(--line)" stroke-width="1.5"/>' +
+    box(20,96,170,"Rachelle","mother") + box(230,96,170,"Matthew","father · the City") +
+    '<line x1="190" y1="119" x2="230" y2="119" stroke="var(--line)" stroke-width="1.5"/>' +
+    '<line x1="210" y1="119" x2="210" y2="170" stroke="var(--line)" stroke-width="1.5"/><line x1="115" y1="170" x2="305" y2="170" stroke="var(--line)" stroke-width="1.5"/>' +
+    '<line x1="115" y1="170" x2="115" y2="190" stroke="var(--line)" stroke-width="1.5"/><line x1="305" y1="170" x2="305" y2="190" stroke="var(--line)" stroke-width="1.5"/>' +
+    box(30,190,170,"Older brother","first son") + box(220,190,170,"Zac","b. 20 Sep 2000", true) +
+    '</svg></div><figcaption>Both of Zac\'s grandfathers survived the Holocaust.</figcaption></figure>';
+}
+
+function identityCards(){
+  return '<div class="idcards">' +
+   '<div class="idcard"><span class="mono">Who he was</span><h3>Zac Brettler</h3><dl>' +
+   '<dt>Home</dt><dd>Mansion flat, Maida Vale</dd><dt>Family</dt><dd>Middle-class, Jewish; grandson of a famous rabbi</dd><dt>School</dt><dd>Mill Hill School</dd><dt>Money</dt><dd>Comfortable, not rich</dd></dl></div>' +
+   '<div class="idcard fake"><span class="mono" style="color:var(--amber)">Who he said he was</span><h3>Zac Ismailov</h3><dl>' +
+   '<dt>Father</dt><dd>A Russian oligarch (fictional)</dd><dt>Job</dt><dd>Placing the family\'s vast wealth</dd><dt>Money</dt><dd>Heir to about US$270 million</dd><dt>Circle</dt><dd>Oligarch kids, Chelsea FC people, Mayfair</dd></dl></div>' +
+   '</div>';
+}
+
+function webFig(){
+  function node(x,y,r,label,sub,col){ return '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+col+'"/>' +
+    '<text x="'+x+'" y="'+(y+r+16)+'" text-anchor="middle" font-family="Source Serif 4, Georgia, serif" font-size="13.5" font-weight="600" fill="var(--ink)">'+label+'</text>' +
+    '<text x="'+x+'" y="'+(y+r+30)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--muted)">'+sub+'</text>'; }
+  function edge(x1,y1,x2,y2,label,lx,ly,dash){ return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="var(--muted)" stroke-width="1.4"'+(dash?' stroke-dasharray="4 4"':'')+'/>' +
+    '<text x="'+lx+'" y="'+ly+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="var(--ink)" paint-order="stroke" stroke="var(--bg)" stroke-width="4">'+label+'</text>'; }
+  return '<figure class="fig wide" style="margin:0"><div class="svgwrap"><svg viewBox="0 0 620 300" role="img" aria-label="How Zac, Akbar and Sharma were connected">' +
+    edge(110,70,300,70,"father of",205,62) +
+    edge(300,70,300,210,"mentor; introduces him to Sharma",300,146) +
+    edge(300,70,510,210,"old friend",430,128) +
+    edge(300,210,510,210,"lodger · promised a payout",405,202) +
+    edge(510,210,530,70,"the flat's owner",560,142,true) +
+    node(110,70,18,"Abdul Shamji","Gomba Group","#8A5A1B") +
+    node(300,70,18,"Akbar Shamji","Mayfair","#8A5A1B") +
+    node(300,210,22,"Zac (as ‘Ismailov’)","19","var(--amber)") +
+    node(510,210,18,"Verinder Sharma","‘Indian Dave’","#9C3B2E") +
+    node(530,70,12,"Saudi princess","owns Riverwalk flat","#5B4E7A") +
+    '</svg></div><figcaption>The triangle at the heart of the book. Zac pretended a row with his "mother" over the inheritance had left him homeless; Akbar steered him to Sharma, who gave him a room.</figcaption></figure>';
+}
+
+function ugandaChain(){
+  return '<div class="chain">' +
+    '<div class="step"><div class="yr">pre-1972</div><div><strong>Kampala.</strong> Abdul Shamji, a second-generation Ugandan of Indian descent and an Ismaili Muslim, runs the Gomba Group and is among Uganda\'s richest men.</div></div>' +
+    '<div class="step"><div class="yr">1972</div><div><strong>Expulsion.</strong> Idi Amin orders all Asians out. Shamji is jailed, escapes, and gets over $1m out via Swiss accounts.</div></div>' +
+    '<div class="step"><div class="yr">1970s–80s</div><div><strong>London.</strong> Gomba rebuilds: property, hotels, transport, manufacturing, the Garrick and Mermaid theatres. Shamji courts the Conservatives.</div></div>' +
+    '<div class="step"><div class="yr">1984</div><div><strong>Johnson Matthey Bankers collapses.</strong> Gomba owes it about £20m and is one of its largest bad debts. The Bank of England steps in.</div></div>' +
+    '<div class="step"><div class="yr">1989</div><div><strong>Prison.</strong> 15 months for perjury, for lying about his assets.</div></div>' +
+    '</div>';
+}
+
+function moneyChain(){
+  return '<div class="chain">' +
+    '<div class="step"><div class="yr">1983</div><div><strong>Brink\'s-Mat, Heathrow.</strong> Robbers led by Micky McAvoy expect cash and find about £26m of gold bullion, held for Johnson Matthey.<div class="arrow">↓ gold melted, sold, laundered</div></div></div>' +
+    '<div class="step"><div class="yr">1980s</div><div><strong>Docklands.</strong> The proceeds are believed to have flowed into property as the derelict docks were rebuilt. It was the first time professional criminals had that much capital for legitimate investment.<div class="arrow">↓ the model spreads</div></div></div>' +
+    '<div class="step"><div class="yr">1990s–2010s</div><div><strong>“Londongrad.”</strong> Russian money pours in. Oligarchs need local fixers like Scot Young, who hid money for Boris Berezovsky through shell companies.<div class="arrow">↓</div></div></div>' +
+    '<div class="step"><div class="yr">2019</div><div><strong>Riverwalk.</strong> The Thames is lined with luxury flats, many owned via offshore companies. One belongs to a Saudi princess and is occupied by a gangster.</div></div>' +
+    '</div>';
+}
+
+function failings(){
+  return '<ul class="beats">' +
+    '<li><span class="where">EVIDENCE</span><span>Blood-like smears in the flat were not swabbed.</span></li>' +
+    '<li><span class="where">GPS</span><span>Data from Akbar\'s Mercedes, showing erratic driving near the scene, was not used to test his account.</span></li>' +
+    '<li><span class="where">WITNESSES</span><span>Key witnesses were not interviewed. Others later refused to talk, seemingly out of fear.</span></li>' +
+    '<li><span class="where">MESSAGES</span><span>Akbar texted an associate that night: “I have just been heating up knives and clearing up blood.”</span></li>' +
+    '<li><span class="where">BODY</span><span>A broken jaw that the pathologist said the fall could not explain.</span></li>' +
+    '</ul>';
+}
+
+/* ---------- people ---------- */
+function initials(n){ return n.replace(/[“”‘’"]/g,"").replace(/^Rabbi /,"").split(/\s+/).filter(function(w){ return /^[A-Z]/.test(w); }).slice(0,2).map(function(w){ return w[0]; }).join(""); }
+function renderPeople(){
+  var vis = PEOPLE.filter(function(p){ return unlocked(p.part); });
+  var groupsPresent = Object.keys(GROUPS).filter(function(g){ return vis.some(function(p){ return p.g === g; }); });
+  if (groupFilter !== "all" && groupsPresent.indexOf(groupFilter) === -1) groupFilter = "all";
+  var f = document.getElementById("filters");
+  f.innerHTML = "";
+  [["all","Everyone"]].concat(groupsPresent.map(function(g){ return [g, GROUPS[g].label]; })).forEach(function(o){
+    var b = document.createElement("button"); b.type = "button"; b.textContent = o[1];
+    b.setAttribute("aria-pressed", String(groupFilter === o[0]));
+    b.addEventListener("click", function(){ groupFilter = o[0]; renderPeople(); });
+    f.appendChild(b);
+  });
+  var host = document.getElementById("people");
+  host.innerHTML = vis.filter(function(p){ return groupFilter === "all" || p.g === groupFilter; }).map(function(p){
+    var col = GROUPS[p.g].color;
+    return '<div class="person"><div class="mono-badge" style="background:' + col + '" aria-hidden="true">' + esc(initials(p.name) || "?") + '</div><div>' +
+      '<div class="name">' + esc(p.name) + '</div>' + (p.aka ? '<div class="aka">' + esc(p.aka) + '</div>' : '') +
+      '<div class="role">' + esc(p.role) + '</div>' +
+      (p.q || p.w ? '<div class="links">' + linksHtml(p.q, p.w) + '</div>' : '') +
+      '<span class="chip">' + partLabel(p.part) + '</span></div></div>';
+  }).join("");
+  var hidden = PEOPLE.length - vis.length;
+  if (hidden) host.insertAdjacentHTML("beforeend", '<div class="person" style="border-style:dashed;background:transparent"><div class="mono-badge" style="background:var(--line);color:var(--muted)">+' + hidden + '</div><div><div class="name">Not met yet</div><div class="role">' + hidden + ' more people appear in later parts.</div></div></div>');
+}
+
+/* ---------- timeline ---------- */
+function yearNum(y){ var m = y.match(/(\d{4})/); return m ? +m[1] : (y.indexOf("2010s") === 0 ? 2015 : 0); }
+function renderTimeline(){
+  var ev = EVENTS.slice().sort(function(a,b){ return yearNum(a.y) - yearNum(b.y); });
+  document.getElementById("timeline").innerHTML = ev.map(function(e){
+    var open = unlocked(e.p);
+    return '<li class="' + (e.key ? "key " : "") + (open ? "" : "hidden-row") + '"><span class="when tabnums">' + esc(open ? e.y : (e.y.match(/\d{4}s?/)||[""])[0]) + '</span><span class="rail"></span>' +
+      '<div class="what">' + (open ? esc(e.t) : "Locked until " + partLabel(e.p)) + '<small>' + partLabel(e.p) + '</small></div></li>';
+  }).join("");
+}
+
+/* ---------- chapters & progress ---------- */
+var FIRST = {0:0, 1:1, 2:7, 3:14, 4:19};
+function partOf(ch){ return ch >= 19 ? 4 : ch >= 14 ? 3 : ch >= 7 ? 2 : 1; }
+var CHAPTERS = [];
+for (var i = 1; i <= 22; i++) CHAPTERS.push(i);
+
+var progress = 1; // chapter the listener has reached
+try { var sv = localStorage.getItem("lf-chapter"); if (sv !== null) progress = Math.max(0, Math.min(22, parseInt(sv,10)||0)); } catch(e){}
+function unlocked(part){ return part === 0 || progress >= FIRST[part]; }
+var groupFilter = "all";
+var selectedPlace = "riverwalk";
+var route = {view:"home", ch:null};
+
+function setProgress(n){
+  progress = n;
+  try { localStorage.setItem("lf-chapter", String(n)); } catch(e){}
+  renderAll();
+}
+
+/* ---------- notes ---------- */
+function getNote(ch){ try { return localStorage.getItem("lf-note-" + ch) || ""; } catch(e){ return ""; } }
+function setNote(ch, v){ try { localStorage.setItem("lf-note-" + ch, v); return true; } catch(e){ return false; } }
+
+/* ---------- content pinned to exact chapters ---------- */
+var CH_PINNED = {
+  1: function(){ return '<ul class="beats">' +
+      '<li><span class="where">NOV 2019</span><span>A surveillance camera at MI6 headquarters on the Thames catches the silhouette of a young man on a brightly lit balcony across the river. He hesitates, then jumps.</span></li>' +
+      '<li><span class="where">DAWN</span><span>About five hours later his body is found face-down on the riverbank. The question the whole book asks: what led 19-year-old Zac Brettler there?</span></li>' +
+    '</ul>' + balconyFig(); },
+  7: function(){ return '<ul class="beats">' +
+      '<li><span class="where">ABDUL</span><span>The backstory of Akbar\'s father, Abdul Shamji: a tycoon whose career mixed ambition, opportunism and fraud.</span></li>' +
+      '<li><span class="where">1972</span><span>Idi Amin expels Uganda\'s entire Asian population. Abdul, one of the country\'s richest men and head of the Gomba Group, is jailed but escapes.</span></li>' +
+    '</ul><div><span class="mono">Abdul Shamji, from Kampala to a London courtroom</span>' + ugandaChain() + '</div>'; }
+};
+
+/* ---------- part-level material (placed by part, not by chapter) ---------- */
+var PART_BEATS = {
+  1: [["FAMILY","Rachelle and Matthew Brettler. Rachelle's father is Rabbi Hugo Gryn; both her father and Matthew's survived the Holocaust. Matthew builds a career in the post-Big Bang City."],
+      ["MAIDA VALE","Zac grows up quick, sociable and obsessed with luxury cars and electronics."],
+      ["MILL HILL","At school he meets the children of Russian oligarchs and is dazzled by the clothes, the cars, the disregard for rules."],
+      ["THE LIE","Zac becomes “Zac Ismailov”, oligarch heir. A Chelsea FC employee met at an art opening leads to Akbar Shamji."]],
+  2: [["AKBAR","The son: Cambridge, Mayfair, a respectable veneer over a series of ventures. He takes Zac under his wing."],
+      ["INDIAN DAVE","Verinder Sharma: extortion, drugs, violence, and the 2004 Hoddesdon shooting that sent him on the run through Europe."],
+      ["RIVERWALK","Zac claims a row with his “mother” over the inheritance has left him homeless. Akbar steers him to Sharma, who gives him a room. As months pass with no payout, Sharma's texts turn furious."],
+      ["28–29 NOV","A final confrontation at the flat, with Akbar present earlier in the night. Shortly after 2 am Zac searches on his iPad for how to treat burns. At 2:23 he is on the balcony. Akbar returns shortly after the fall."]],
+  3: [["THE CITY","Keefe steps back to London itself: grand facades built on imperial plunder, and a modern role as a global hub for laundering dirty money."],
+      ["SCOT YOUNG","A Scottish fixer for Boris Berezovsky, one of the “Cipriani Five”. A ruinous divorce, a spell in jail, then a fatal fall in Marylebone in 2014."],
+      ["THE CASE","Arrests four days after Zac's death; releases; a stalled murder inquiry. Sharma dies in the same flat in December 2020."],
+      ["INQUEST","December 2022: an open conclusion. Rachelle tells the court Zac “wanted money and power. Fast.” The family believe he jumped to escape violence."]],
+  4: [["KEEFE","The author meets Matthew and Rachelle. After some hesitation they decide to tell their story, feeling the authorities failed them."],
+      ["SILENCE","Witnesses won't talk. Akbar declines an interview, framing it as kindness to the family while hinting they were to blame."],
+      ["AKBAR NOW","Rachelle watches his glamorous life on social media. He becomes CEO of Bitzero, a crypto miner, and wins praise from North Dakota's governor."],
+      ["GPS","Overlooked tracking data, published in 2024, pulls apart Akbar's account of the night."]]
+};
+var PART_FIGS = {
+  1: function(){ return '<div class="two">' + familyFig() + '<div style="display:grid;gap:12px;align-content:start"><span class="mono">Two Zacs</span>' + identityCards() + '</div></div>'; },
+  2: function(){ return webFig(); },
+  3: function(){ return '<div class="two"><div><span class="mono">Follow the gold</span>' + moneyChain() + '</div><div><span class="mono">What the investigation missed</span>' + failings() + '</div></div>'; },
+  4: function(){ return '<p class="note">Bitzero\'s North Dakota plan centred on a Cold War missile complex at Nekoma, with its distinctive concrete pyramid. <a href="' + img("Nekoma pyramid Stanley R. Mickelsen Safeguard Complex") + '" target="_blank" rel="noopener">See photos</a></p>'; }
+};
+function beatsHtml(list){ return '<ul class="beats">' + list.map(function(b){ return '<li><span class="where">' + esc(b[0]) + '</span><span>' + esc(b[1]) + '</span></li>'; }).join("") + '</ul>'; }
+
+/* ---------- routing ---------- */
+function parseHash(){
+  var h = (location.hash || "").replace(/^#/, "");
+  var m = h.match(/^ch-(\d{1,2})$/);
+  if (m && +m[1] >= 1 && +m[1] <= 22) return {view:"chapter", ch:+m[1]};
+  if (["map","people","timeline","notes"].indexOf(h) !== -1) return {view:h, ch:null};
+  return {view:"home", ch:null};
+}
+function go(hash){
+  try { if (location.hash !== "#" + hash) history.pushState(null, "", "#" + hash); } catch(e){}
+  route = hashToRoute(hash);
+  renderAll();
+  window.scrollTo(0, 0);
+}
+function hashToRoute(hash){
+  var m = hash.match(/^ch-(\d{1,2})$/);
+  if (m) return {view:"chapter", ch:+m[1]};
+  if (["map","people","timeline","notes"].indexOf(hash) !== -1) return {view:hash, ch:null};
+  return {view:"home", ch:null};
+}
+document.addEventListener("click", function(ev){
+  var a = ev.target.closest && ev.target.closest("a[data-go]");
+  if (!a) return;
+  ev.preventDefault();
+  if (a.dataset.place) selectedPlace = a.dataset.place;
+  document.getElementById("side").classList.remove("open");
+  go(a.dataset.go);
+});
+window.addEventListener("hashchange", function(){ route = parseHash(); renderAll(); });
+window.addEventListener("popstate", function(){ route = parseHash(); renderAll(); });
+
+/* ---------- sidebar ---------- */
+function renderSide(){
+  var sel = document.getElementById("progress-select");
+  var opts = ['<option value="0">Not started</option>'];
+  CHAPTERS.forEach(function(c){
+    var p = partOf(c);
+    opts.push('<option value="' + c + '">' + (FIRST[p] === c ? "Part " + p + " · " : "") + "Chapter " + c + '</option>');
+  });
+  sel.innerHTML = opts.join("");
+  sel.value = String(progress);
+
+  var nav = document.getElementById("nav");
+  function link(hash, label, tag, cls, pinned, current){
+    return '<a href="#' + hash + '" data-go="' + hash + '" class="' + (cls||"") + '"' + (current ? ' aria-current="page"' : '') + '><span>' + label + '</span>' +
+      (pinned ? '<i class="pin" title="Has chapter-specific content"></i>' : '') + (tag ? '<span class="tag">' + tag + '</span>' : '') + '</a>';
+  }
+  var html = '<div class="nav-group"><span class="gl">Guide</span>' +
+    link("home", "Overview", "", "", false, route.view === "home") +
+    link("map", "Map", "", "", false, route.view === "map") +
+    link("people", "People", "", "", false, route.view === "people") +
+    link("timeline", "Timeline", "", "", false, route.view === "timeline") +
+    link("notes", "My notes", "", "", false, route.view === "notes") + '</div>';
+  [1,2,3,4].forEach(function(p){
+    html += '<div class="nav-group"><span class="gl">Part ' + p + (unlocked(p) ? " · " + esc(PARTS[p-1].title) : "") + '</span>';
+    CHAPTERS.filter(function(c){ return partOf(c) === p; }).forEach(function(c){
+      var locked = c > progress;
+      var cls = (locked ? "lockd " : "") + (getNote(c) ? "noted" : "");
+      html += link("ch-" + c, "Chapter " + c, locked ? "locked" : "", cls, !locked && !!CH_PINNED[c], route.view === "chapter" && route.ch === c);
+    });
+    html += '</div>';
+  });
+  nav.innerHTML = html;
+}
+document.getElementById("progress-select").addEventListener("change", function(e){ setProgress(+e.target.value); });
+document.getElementById("menu-toggle").addEventListener("click", function(){
+  var side = document.getElementById("side");
+  var open = side.classList.toggle("open");
+  this.setAttribute("aria-expanded", String(open));
+});
+
+/* ---------- home ---------- */
+function renderHome(){
+  var v = document.getElementById("view-home");
+  var cards = [1,2,3,4].map(function(p){
+    var chs = CHAPTERS.filter(function(c){ return partOf(c) === p; });
+    return '<a class="ov" href="#ch-' + FIRST[p] + '" data-go="ch-' + FIRST[p] + '"><span class="mono">Part ' + p + ' · ' + PARTS[p-1].ch + '</span>' +
+      '<h3>' + (unlocked(p) ? esc(PARTS[p-1].title) : "Locked") + '</h3>' +
+      '<div class="chs">' + chs.map(function(c){ return '<span class="' + (c <= progress ? "on" : "") + '">' + c + '</span>'; }).join("") + '</div></a>';
+  }).join("");
+  v.innerHTML = '<header class="hero" style="padding-block:8px 0">' +
+    '<div class="stamp">CAM 04 · VAUXHALL CROSS · 29.11.2019 · 02:23:41</div>' +
+    '<h1>London Falling Companion</h1>' +
+    '<p class="lede">A listening guide to Patrick Radden Keefe\'s <em>London Falling</em> (2026): the people, places and money behind the death of Zac Brettler. Set how far you\'ve listened and everything after that stays hidden.</p></header>' +
+    '<div class="panel"><span class="mono">How to use it</span>' +
+    '<ul class="beats">' +
+      '<li><span class="where">PROGRESS</span><span>Set <strong>“I\'ve listened up to”</strong> in the sidebar. Chapters, map pins, people and dates past that point stay locked.</span></li>' +
+      '<li><span class="where">CHAPTERS</span><span>Each chapter tab shows anything pinned to that exact chapter (marked with an amber dot), then the wider material for its part.</span></li>' +
+      '<li><span class="where">NOTES</span><span>Every chapter has a notes box. Jot down who and what came up; <strong>My notes</strong> collects them all so you can copy them out.</span></li>' +
+    '</ul></div>' +
+    '<div class="overview">' + cards + '</div>' +
+    '<p class="note">Continue: <a href="#ch-' + Math.max(1, progress) + '" data-go="ch-' + Math.max(1, progress) + '">Chapter ' + Math.max(1, progress) + '</a></p>';
+}
+
+/* ---------- chapter view ---------- */
+function renderChapter(){
+  var v = document.getElementById("view-chapter");
+  var c = route.ch, p = partOf(c);
+  var prev = c > 1 ? c - 1 : null, next = c < 22 ? c + 1 : null;
+  var pager = '<div class="pager">' +
+    '<a href="#ch-' + (prev||1) + '" data-go="ch-' + (prev||1) + '"' + (prev ? '' : ' aria-disabled="true"') + '>← Ch ' + (prev||"") + '</a>' +
+    '<a href="#ch-' + (next||22) + '" data-go="ch-' + (next||22) + '"' + (next ? '' : ' aria-disabled="true"') + '>Ch ' + (next||"") + ' →</a></div>';
+  var head = '<div class="chap-head"><div class="bar"><span class="mono">Part ' + p + ' · Chapter ' + c + ' of 22</span>' + pager + '</div>' +
+    '<h1>Chapter ' + c + '</h1>' + (c <= progress ? '<p class="lede">' + esc(PARTS[p-1].title) + '</p>' : '') + '</div>';
+
+  if (c > progress){
+    v.innerHTML = head + '<div class="locked" style="border-radius:12px;border:1px solid var(--line)"><p>You\'ve marked yourself at ' + (progress ? "Chapter " + progress : "not started") + '. This chapter stays hidden until you get here.</p>' +
+      '<button class="btn" type="button" id="unlock-btn">I\'ve reached Chapter ' + c + '</button></div>';
+    document.getElementById("unlock-btn").addEventListener("click", function(){ setProgress(c); });
+    return;
+  }
+
+  var pinned = CH_PINNED[c] ? '<div class="panel"><span class="mono" style="color:var(--amber)">In this chapter</span>' + CH_PINNED[c]() + '</div>' : '';
+
+  var parts = [p];
+  if (p === 1) parts = [0, 1];
+  var places = PLACES.filter(function(pl){ return parts.indexOf(pl.part) !== -1; });
+  var people = PEOPLE.filter(function(pe){ return parts.indexOf(pe.part) !== -1; });
+  var chips = '<div class="two"><div style="display:grid;gap:8px"><span class="mono">Places in Part ' + p + '</span><div class="chips">' +
+      places.map(function(pl){ return '<a href="#map" data-go="map" data-place="' + pl.id + '">' + esc(pl.name) + '</a>'; }).join("") + '</div></div>' +
+    '<div style="display:grid;gap:8px"><span class="mono">People in Part ' + p + '</span><div class="chips">' +
+      people.map(function(pe){ return '<a href="#people" data-go="people">' + esc(pe.name) + '</a>'; }).join("") + '</div></div></div>';
+
+  var glance = '<details class="glance"' + (FIRST[p] === c || !CH_PINNED[c] ? ' open' : '') + '><summary><span><span class="mono">Part ' + p + ' at a glance · ' + PARTS[p-1].ch + '</span><br><span style="font-family:var(--display);font-size:1.2rem">' + esc(PARTS[p-1].title) + '</span></span></summary>' +
+    '<div class="inner"><p class="note">Summaries place these events somewhere in ' + PARTS[p-1].ch + ', not in a specific chapter. Some may come later in the part than where you are now.</p>' +
+    beatsHtml(PART_BEATS[p]) + PART_FIGS[p]() + chips + '</div></details>';
+
+  var notes = '<div class="panel notes"><span class="mono">My notes · Chapter ' + c + '</span>' +
+    '<label for="note-' + c + '" class="sr" style="font-size:.9rem;color:var(--muted)">Who came up, where it happened, anything to look up later.</label>' +
+    '<textarea id="note-' + c + '" placeholder="e.g. Zac\'s first day at Mill Hill; meets the son of…"></textarea>' +
+    '<div class="row"><span class="saved" id="saved-' + c + '"></span><a href="#notes" data-go="notes" style="font-size:.88rem">All my notes</a></div></div>';
+
+  v.innerHTML = head + pinned + glance + notes;
+  var ta = document.getElementById("note-" + c);
+  ta.value = getNote(c);
+  var t;
+  ta.addEventListener("input", function(){
+    clearTimeout(t);
+    t = setTimeout(function(){
+      var ok = setNote(c, ta.value);
+      document.getElementById("saved-" + c).textContent = ok ? "Saved" : "Couldn't save in this browser";
+      renderSide();
+    }, 400);
+  });
+}
+
+/* ---------- all notes ---------- */
+function allNotesText(){
+  return CHAPTERS.map(function(c){ var n = getNote(c).trim(); return n ? "Chapter " + c + "\n" + n : null; }).filter(Boolean).join("\n\n");
+}
+function renderNotes(){
+  var v = document.getElementById("view-notes");
+  var txt = allNotesText();
+  v.innerHTML = '<div class="sec-head"><span class="mono">Your listening log</span><h1>My notes</h1>' +
+    '<p>Everything you\'ve written, chapter by chapter. Copy it out to keep it, or paste it to Claude to have your notes turned into proper chapter pages.</p></div>' +
+    (txt ? '<div class="panel notes"><textarea id="all-notes" readonly style="min-height:320px"></textarea>' +
+      '<div class="row"><button class="btn" type="button" id="copy-notes">Copy all notes</button><span class="saved" id="copy-status"></span></div></div>' :
+      '<div class="panel"><p>No notes yet. Open a chapter and use the notes box at the bottom.</p></div>');
+  if (!txt) return;
+  var ta = document.getElementById("all-notes");
+  ta.value = txt;
+  document.getElementById("copy-notes").addEventListener("click", function(){
+    var status = document.getElementById("copy-status");
+    function fallback(){ ta.focus(); ta.select(); status.textContent = "Selected. Press Ctrl+C (or ⌘C) to copy."; }
+    try {
+      navigator.clipboard.writeText(txt).then(function(){ status.textContent = "Copied"; }, fallback);
+    } catch(e){ fallback(); }
+  });
+}
+
+/* ---------- render ---------- */
+function showView(name){
+  ["home","chapter","map","people","timeline","notes"].forEach(function(n){ document.getElementById("view-" + n).hidden = (n !== name); });
+}
+function renderAll(){
+  renderSide();
+  showView(route.view);
+  if (route.view === "home") renderHome();
+  if (route.view === "chapter") renderChapter();
+  if (route.view === "map"){ renderMap(); renderWorld(); }
+  if (route.view === "people") renderPeople();
+  if (route.view === "timeline") renderTimeline();
+  if (route.view === "notes") renderNotes();
+}
+route = parseHash();
+renderAll();
+})();
+</script>
+</body>
+</html>
